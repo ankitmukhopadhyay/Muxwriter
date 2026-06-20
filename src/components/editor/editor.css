@@ -1,0 +1,142 @@
+.editor {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  background: var(--color-bg);
+}
+
+/* Left element rail ----------------------------------------------------- */
+.rail {
+  width: var(--rail-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-strong);
+}
+
+.rail__btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-script);
+  font-size: var(--text-md);
+  color: var(--color-text-faint);
+  transition:
+    color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.rail__btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+}
+
+.rail__btn--active {
+  color: var(--color-bg);
+  background: var(--color-accent);
+}
+
+.rail__btn--active:hover {
+  color: var(--color-bg);
+  background: var(--color-accent-hover);
+}
+
+/* Scrolling page area --------------------------------------------------- */
+.editor__scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-5) var(--space-8);
+}
+
+/* The script page: real document proportions on cream paper ------------- */
+.page {
+  width: 8.5in;
+  min-height: 11in;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* US Letter screenplay margins */
+  padding: 1in 1in 1in 1.5in;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 1px solid var(--color-paper-edge);
+  border-radius: 2px;
+  box-shadow: var(--shadow-page);
+  cursor: text;
+}
+
+/* Element textareas ----------------------------------------------------- */
+.element {
+  display: block;
+  width: 6in; /* text block width: 8.5 minus 1.5 left minus 1 right */
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-script);
+  font-size: var(--script-font-size);
+  line-height: 1.05;
+  color: var(--color-ink);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.element::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 0.5;
+}
+
+.element::selection {
+  background: var(--color-accent-faint);
+}
+
+/* One blank line of rhythm before most elements. The first element and the
+   contiguous lines of a dialogue block (parenthetical, dialogue) sit tight. */
+.element {
+  margin-top: 1em;
+}
+.element:first-child {
+  margin-top: 0;
+}
+
+.element--scene_heading {
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 2em;
+}
+
+.element--transition {
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 1em;
+}
+
+.element--character {
+  text-transform: uppercase;
+  margin-left: 2in;
+  width: 4in;
+  margin-top: 1em;
+}
+
+.element--parenthetical {
+  margin-left: 1.6in;
+  width: 3in;
+  font-style: italic;
+  margin-top: 0;
+}
+
+.element--dialogue {
+  margin-left: 1in;
+  width: 3.5in;
+  margin-top: 0;
+}

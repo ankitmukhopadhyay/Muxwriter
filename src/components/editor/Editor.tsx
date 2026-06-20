@@ -1,0 +1,179 @@
+import { useLayoutEffect, useRef, useState } from "react";
+import {
+  cycleType,
+  makeElement,
+  nextTypeOnEnter,
+  type ElementType,
+  type ScriptElement,
+} from "../../lib/fountain";
+import { ElementBlock } from "./ElementBlock";
+import { ElementRail } from "./ElementRail";
+import "./editor.css";
+
+interface EditorProps {
+  elements: ScriptElement[];
+  onChange: (elements: ScriptElement[]) => void;
+}
+
+interface FocusIntent {
+  id: string;
+  caret: number;
+}
+
+/**
+ * The script page and its element rail. Owns selection, the keyboard grammar
+ * (Enter splits and advances type, Tab cycles type, Backspace at the start of
+ * a line merges into the previous element) and caret restoration after the
+ * element list is restructured.
+ */
+export function Editor({ elements, onChange }: EditorProps) {
+  const [activeId, setActiveId] = useState<string | null>(
+    elements[0]?.id ?? null,
+  );
+  const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
+  const pendingFocus = useRef<FocusIntent | null>(null);
+
+  // After a structural edit re-renders the list, restore focus and caret.
+  useLayoutEffect(() => {
+    const intent = pendingFocus.current;
+    if (!intent) return;
+    const node = refs.current.get(intent.id);
+    if (node) {
+      node.focus();
+      const pos = Math.min(intent.caret, node.value.length);
+      node.setSelectionRange(pos, pos);
+    }
+    pendingFocus.current = null;
+  });
+
+  const activeType: ElementType | null =
+    elements.find((el) => el.id === activeId)?.type ?? null;
+
+  const indexOf = (id: string) => elements.findIndex((el) => el.id === id);
+
+  const setText = (id: string, text: string) => {
+    onChange(elements.map((el) => (el.id === id ? { ...el, text } : el)));
+  };
+
+  const setType = (id: string, type: ElementType) => {
+    onChange(elements.map((el) => (el.id === id ? { ...el, type } : el)));
+  };
+
+  /** Split the element at the caret, the remainder becoming a new element. */
+  const splitAt = (id: string, caret: number) => {
+    const i = indexOf(id);
+    if (i === -1) return;
+    const el = elements[i];
+    const before = el.text.slice(0, caret);
+    const after = el.text.slice(caret);
+    const created = makeElement(nextTypeOnEnter(el.type), after);
+    const next = [...elements];
+    next[i] = { ...el, text: before };
+    next.splice(i + 1, 0, created);
+    pendingFocus.current = { id: created.id, caret: 0 };
+    setActiveId(created.id);
+    onChange(next);
+  };
+
+  /** Merge an element into the previous one (Backspace at column zero). */
+  const mergeBack = (id: string) => {
+    const i = indexOf(id);
+    if (i <= 0) return;
+    const prev = elements[i - 1];
+    const cur = elements[i];
+    const caret = prev.text.length;
+    const next = [...elements];
+    next[i - 1] = { ...prev, text: prev.text + cur.text };
+    next.splice(i, 1);
+    pendingFocus.current = { id: prev.id, caret };
+    setActiveId(prev.id);
+    onChange(next);
+  };
+
+  const focusSibling = (id: string, dir: -1 | 1, caret: number) => {
+    const i = indexOf(id);
+    const target = elements[i + dir];
+    if (!target) return false;
+    pendingFocus.current = { id: target.id, caret };
+    setActiveId(target.id);
+    // Force the focus effect to run even though the list is unchanged.
+    onChange([...elements]);
+    return true;
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    id: string,
+  ) => {
+    const ta = e.currentTarget;
+    const caret = ta.selectionStart;
+    const hasSelection = ta.selectionStart !== ta.selectionEnd;
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      splitAt(id, caret);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      setType(id, cycleType(activeType ?? "action", e.shiftKey));
+    } else if (e.key === "Backspace" && caret === 0 && !hasSelection) {
+      const i = indexOf(id);
+      if (i > 0) {
+        e.preventDefault();
+        mergeBack(id);
+      }
+    } else if (e.key === "ArrowUp" && !hasSelection) {
+      const beforeCaret = ta.value.slice(0, caret);
+      if (!beforeCaret.includes("\n")) {
+        if (focusSibling(id, -1, Number.MAX_SAFE_INTEGER)) e.preventDefault();
+      }
+    } else if (e.key === "ArrowDown" && !hasSelection) {
+      const afterCaret = ta.value.slice(caret);
+      if (!afterCaret.includes("\n")) {
+        if (focusSibling(id, 1, 0)) e.preventDefault();
+      }
+    }
+  };
+
+  const focusLast = () => {
+    const last = elements[elements.length - 1];
+    if (!last) return;
+    pendingFocus.current = { id: last.id, caret: last.text.length };
+    setActiveId(last.id);
+    onChange([...elements]);
+  };
+
+  return (
+    <div className="editor">
+      <ElementRail
+        activeType={activeType}
+        onPick={(type) => activeId && setType(activeId, type)}
+      />
+      <div className="editor__scroll">
+        <div
+          className="page"
+          onMouseDown={(e) => {
+            // Clicking the page margin (not an element) focuses the end.
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+              focusLast();
+            }
+          }}
+        >
+          {elements.map((el) => (
+            <ElementBlock
+              key={el.id}
+              element={el}
+              onChangeText={(text) => setText(el.id, text)}
+              onKeyDown={(e) => handleKeyDown(e, el.id)}
+              onFocus={() => setActiveId(el.id)}
+              registerRef={(node) => {
+                if (node) refs.current.set(el.id, node);
+                else refs.current.delete(el.id);
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
