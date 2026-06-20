@@ -9,6 +9,7 @@ import { isTauri } from "./platform";
  */
 
 export type AiProvider = "anthropic" | "openai";
+export type Theme = "dark" | "light";
 
 export interface AppSettings {
   provider: AiProvider;
@@ -16,6 +17,7 @@ export interface AppSettings {
   openaiApiKey: string;
   /** Model id, e.g. "claude-opus-4-8". */
   model: string;
+  theme: Theme;
 }
 
 export const ANTHROPIC_MODELS = [
@@ -35,6 +37,7 @@ export function defaultSettings(): AppSettings {
     anthropicApiKey: "",
     openaiApiKey: "",
     model: "claude-opus-4-8",
+    theme: "dark",
   };
 }
 
@@ -48,6 +51,7 @@ function coerce(raw: unknown): AppSettings {
       typeof o.anthropicApiKey === "string" ? o.anthropicApiKey : "",
     openaiApiKey: typeof o.openaiApiKey === "string" ? o.openaiApiKey : "",
     model: typeof o.model === "string" && o.model ? o.model : base.model,
+    theme: o.theme === "light" ? "light" : "dark",
   };
 }
 

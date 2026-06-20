@@ -40,7 +40,6 @@ import {
 } from "./lib/ai";
 import type { EditorSelection } from "./components/editor/Editor";
 import { applyProposedEdit, type ProposedEdit } from "./lib/editing";
-import { exportScriptPdf, exportChat } from "./lib/export";
 import { isTauri } from "./lib/platform";
 import "./App.css";
 
@@ -72,6 +71,20 @@ function App() {
   useEffect(() => {
     void loadSettings().then(setSettings);
   }, []);
+
+  // Apply the chosen theme to the document root.
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings.theme;
+  }, [settings.theme]);
+
+  const toggleTheme = () => {
+    const next: AppSettings = {
+      ...settings,
+      theme: settings.theme === "dark" ? "light" : "dark",
+    };
+    setSettings(next);
+    void saveSettings(next);
+  };
 
   const handleChange = (next: ScriptElement[]) => {
     setElements(next);
@@ -238,7 +251,13 @@ function App() {
         onSave={() => void doSave()}
         onNotes={() => setNotesOpen(true)}
         onInsights={() => setInsightsOpen(true)}
-        onExportPdf={() => void exportScriptPdf(elements, metadata)}
+        onExportPdf={() =>
+          void import("./lib/export").then((m) =>
+            m.exportScriptPdf(elements, metadata),
+          )
+        }
+        theme={settings.theme}
+        onToggleTheme={toggleTheme}
       />
       <div className="workspace">
         <div className="editor-pane">
@@ -271,7 +290,11 @@ function App() {
           onJumpToScene={(index) =>
             setJumpRequest({ index, nonce: Date.now() })
           }
-          onExportChat={() => void exportChat(messages, metadata)}
+          onExportChat={() =>
+            void import("./lib/export").then((m) =>
+              m.exportChat(messages, metadata),
+            )
+          }
         />
       </div>
       {settingsOpen && (

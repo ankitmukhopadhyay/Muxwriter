@@ -48,6 +48,47 @@
   --color-scrollbar-hover: #4a4032aa;
 }
 
+/*
+ * Light theme: a warm taupe chrome, not a flat white invert. The script page
+ * stays cream in both themes (it is paper). Writers work long late sessions,
+ * so both themes get real attention, not just inverted values.
+ */
+[data-theme="light"] {
+  --color-bg: #e4ddcd;
+  --color-surface: #ece5d5;
+  --color-surface-raised: #f2ece0;
+  --color-surface-overlay: #f7f2e8;
+  --color-border: #2a251c12;
+  --color-border-strong: #c9bea4;
+
+  --color-text: #2a251c;
+  --color-text-muted: #6b6453;
+  --color-text-faint: #9a917c;
+
+  /* Paper stays cream; ink stays dark */
+  --color-paper: #f6efdc;
+  --color-paper-edge: #e3d8bd;
+  --color-ink: #1f1b14;
+  --color-ink-muted: #6b6353;
+
+  /* Slightly deeper brass for contrast on a light surface */
+  --color-accent: #9c7a3c;
+  --color-accent-hover: #b08d4f;
+  --color-accent-muted: #b8a886;
+  --color-accent-faint: #9c7a3c1f;
+
+  --color-danger: #b14b3f;
+  --color-danger-hover: #c25b4e;
+  --color-success: #6a8a4e;
+  --color-diff-add: #6a8a4e2b;
+  --color-diff-remove: #b14b3f2b;
+
+  --color-scrollbar: #9a917c66;
+  --color-scrollbar-hover: #6b645399;
+
+  --shadow-page: 0 6px 28px #2a251c2e;
+}
+
 :root {
   /* Typography ---------------------------------------------------------- */
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;

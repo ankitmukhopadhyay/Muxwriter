@@ -1,4 +1,5 @@
 import type { RuntimeEstimate } from "../../lib/fountain";
+import type { Theme } from "../../lib/settings";
 import { appWindow } from "../../lib/platform";
 import "./titlebar.css";
 
@@ -6,12 +7,14 @@ interface TitleBarProps {
   fileName: string | null;
   dirty: boolean;
   runtime: RuntimeEstimate;
+  theme: Theme;
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
   onNotes: () => void;
   onInsights: () => void;
   onExportPdf: () => void;
+  onToggleTheme: () => void;
 }
 
 /**
@@ -23,12 +26,14 @@ export function TitleBar({
   fileName,
   dirty,
   runtime,
+  theme,
   onNew,
   onOpen,
   onSave,
   onNotes,
   onInsights,
   onExportPdf,
+  onToggleTheme,
 }: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
   const toggleMaximize = () => void appWindow()?.toggleMaximize();
@@ -90,6 +95,33 @@ export function TitleBar({
           <strong>{runtime.pagesLabel}</strong> pp
           <span className="titlebar__runtime-sep">·</span>~{runtime.minutes} min
         </span>
+
+        <button
+          type="button"
+          className="winbtn"
+          onClick={onToggleTheme}
+          title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="3.4" fill="currentColor" />
+              <path
+                d="M8 .8v2M8 13.2v2M.8 8h2M13.2 8h2M2.7 2.7l1.4 1.4M11.9 11.9l1.4 1.4M13.3 2.7l-1.4 1.4M4.1 11.9l-1.4 1.4"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z"
+                fill="currentColor"
+              />
+            </svg>
+          )}
+        </button>
 
         <div className="titlebar__controls">
           <button
