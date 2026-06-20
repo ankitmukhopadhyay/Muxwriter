@@ -9,6 +9,13 @@
   border: 1px solid var(--color-border-strong);
 }
 
+/* Editor and AI sidebar sit side by side below the title bar. */
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
 /* Invisible resize handles for the frameless window -------------------- */
 .resize {
   position: fixed;

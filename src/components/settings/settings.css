@@ -1,0 +1,110 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #00000066;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-window);
+}
+
+.modal {
+  width: 440px;
+  max-width: 90vw;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+.modal__header h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+.modal__close {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+.modal__close:hover {
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+}
+
+.modal__body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.field__label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.field input,
+.field select {
+  padding: 9px var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-accent-muted);
+}
+.field__note {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-text-faint);
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+.btn--ghost {
+  color: var(--color-text-muted);
+}
+.btn--ghost:hover {
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+}
+.btn--primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+.btn--primary:hover {
+  background: var(--color-accent-hover);
+}

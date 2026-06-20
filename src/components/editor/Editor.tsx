@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   cycleType,
   makeElement,
@@ -13,6 +13,8 @@ import "./editor.css";
 interface EditorProps {
   elements: ScriptElement[];
   onChange: (elements: ScriptElement[]) => void;
+  /** Reports the focused element so the app can derive the current scene. */
+  onActiveIdChange?: (id: string | null) => void;
 }
 
 interface FocusIntent {
@@ -26,12 +28,16 @@ interface FocusIntent {
  * a line merges into the previous element) and caret restoration after the
  * element list is restructured.
  */
-export function Editor({ elements, onChange }: EditorProps) {
+export function Editor({ elements, onChange, onActiveIdChange }: EditorProps) {
   const [activeId, setActiveId] = useState<string | null>(
     elements[0]?.id ?? null,
   );
   const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const pendingFocus = useRef<FocusIntent | null>(null);
+
+  useEffect(() => {
+    onActiveIdChange?.(activeId);
+  }, [activeId, onActiveIdChange]);
 
   // After a structural edit re-renders the list, restore focus and caret.
   useLayoutEffect(() => {

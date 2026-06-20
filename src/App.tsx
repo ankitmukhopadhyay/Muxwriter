@@ -3,7 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { Editor } from "./components/editor/Editor";
 import { TitleBar } from "./components/titlebar/TitleBar";
 import { ResizeHandles } from "./components/titlebar/ResizeHandles";
+import { Sidebar } from "./components/sidebar/Sidebar";
+import { SettingsModal } from "./components/settings/SettingsModal";
 import {
+  deriveScenes,
   estimateRuntime,
   fountainToElements,
   SAMPLE_SCRIPT,
@@ -17,6 +20,14 @@ import {
   readScript,
   writeScript,
 } from "./lib/files";
+import {
+  activeKey,
+  defaultSettings,
+  loadSettings,
+  saveSettings,
+  type AppSettings,
+} from "./lib/settings";
+import { buildSystemPrompt, sendChat, type ChatMessage } from "./lib/ai";
 import { isTauri } from "./lib/platform";
 import "./App.css";
 
@@ -27,8 +38,19 @@ function App() {
   const [metadata, setMetadata] = useState<MuxwMetadata>(() => emptyMetadata());
   const [filePath, setFilePath] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  // Bumped on open/new so the Editor remounts with a fresh selection.
   const [docKey, setDocKey] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // AI partner state.
+  const [settings, setSettings] = useState<AppSettings>(() => defaultSettings());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void loadSettings().then(setSettings);
+  }, []);
 
   const handleChange = (next: ScriptElement[]) => {
     setElements(next);
@@ -86,8 +108,6 @@ function App() {
     }
   };
 
-  // Keep the latest handlers in a ref so the global shortcut listener never
-  // goes stale without rebinding on every keystroke.
   const actions = useRef({ doSave, doOpen, doNew, doSaveAs });
   actions.current = { doSave, doOpen, doNew, doSaveAs };
 
@@ -113,7 +133,6 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // On startup, open the file the app was launched with (double clicked .muxw).
   useEffect(() => {
     if (!isTauri()) return;
     void (async () => {
@@ -128,8 +147,39 @@ function App() {
     })();
   }, []);
 
+  const handleSaveSettings = (next: AppSettings) => {
+    setSettings(next);
+    void saveSettings(next);
+    setSettingsOpen(false);
+  };
+
+  const currentSceneId = (() => {
+    if (!activeId) return null;
+    const scene = deriveScenes(elements).find((s) =>
+      s.elementIds.includes(activeId),
+    );
+    return scene?.id ?? null;
+  })();
+
+  const handleSend = async (text: string) => {
+    const next: ChatMessage[] = [...messages, { role: "user", content: text }];
+    setMessages(next);
+    setChatBusy(true);
+    setChatError(null);
+    try {
+      const system = buildSystemPrompt(metadata, elements, currentSceneId);
+      const reply = await sendChat(settings, system, next);
+      setMessages([...next, { role: "assistant", content: reply }]);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
   const runtime = estimateRuntime(elements);
   const fileName = filePath ? baseName(filePath) : null;
+  const hasKey = activeKey(settings).trim().length > 0;
 
   return (
     <div className="app-shell">
@@ -142,7 +192,29 @@ function App() {
         onOpen={() => void doOpen()}
         onSave={() => void doSave()}
       />
-      <Editor key={docKey} elements={elements} onChange={handleChange} />
+      <div className="workspace">
+        <Editor
+          key={docKey}
+          elements={elements}
+          onChange={handleChange}
+          onActiveIdChange={setActiveId}
+        />
+        <Sidebar
+          messages={messages}
+          busy={chatBusy}
+          error={chatError}
+          hasKey={hasKey}
+          onSend={(text) => void handleSend(text)}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      </div>
+      {settingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onSave={handleSaveSettings}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,9 @@
   flex: 1;
   display: flex;
   min-height: 0;
+  /* Allow the editor to shrink below the fixed page width so the AI sidebar
+     keeps its space; the page scrolls horizontally when the window is narrow. */
+  min-width: 0;
   background: var(--color-bg);
 }
 
@@ -50,7 +53,8 @@
 /* Scrolling page area --------------------------------------------------- */
 .editor__scroll {
   flex: 1;
-  overflow-y: auto;
+  min-width: 0;
+  overflow: auto;
   display: flex;
   justify-content: center;
   padding: var(--space-6) var(--space-5) var(--space-8);
