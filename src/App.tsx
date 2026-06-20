@@ -27,7 +27,12 @@ import {
   saveSettings,
   type AppSettings,
 } from "./lib/settings";
-import { buildSystemPrompt, sendChat, type ChatMessage } from "./lib/ai";
+import {
+  buildSystemPrompt,
+  sendChat,
+  summarizeCompletedScenes,
+  type ChatMessage,
+} from "./lib/ai";
 import { isTauri } from "./lib/platform";
 import "./App.css";
 
@@ -167,8 +172,17 @@ function App() {
     setChatBusy(true);
     setChatError(null);
     try {
-      const system = buildSystemPrompt(metadata, elements, currentSceneId);
-      const reply = await sendChat(settings, system, next);
+      // Roll completed scenes into the summary log so context stays compact,
+      // then assemble context from the freshest metadata.
+      let meta = metadata;
+      const summarized = await summarizeCompletedScenes(settings, meta, elements);
+      if (summarized) {
+        meta = summarized;
+        setMetadata(summarized);
+        setDirty(true);
+      }
+      const system = buildSystemPrompt(meta, elements, currentSceneId);
+      const reply = await sendChat(settings, system, next, elements);
       setMessages([...next, { role: "assistant", content: reply }]);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : String(err));
