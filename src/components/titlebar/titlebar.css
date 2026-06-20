@@ -1,0 +1,126 @@
+.titlebar {
+  height: var(--titlebar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-strong);
+  position: relative;
+  user-select: none;
+}
+
+/* Left: brand --------------------------------------------------------- */
+.titlebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 140px;
+}
+
+.titlebar__mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.titlebar__wordmark {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+/* Center: file name --------------------------------------------------- */
+.titlebar__center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  max-width: 40%;
+}
+
+.titlebar__file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar__dirty {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* Right: runtime + window controls ------------------------------------ */
+.titlebar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.titlebar__runtime {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.titlebar__runtime strong {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.titlebar__runtime-sep {
+  color: var(--color-text-faint);
+}
+
+.titlebar__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.winbtn {
+  width: 36px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.winbtn:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.winbtn--close:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
