@@ -65,6 +65,13 @@
   color: var(--color-text);
 }
 
+.titlebar__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--space-1);
+  background: var(--color-border-strong);
+}
+
 /* Center: file name --------------------------------------------------- */
 .titlebar__center {
   position: absolute;

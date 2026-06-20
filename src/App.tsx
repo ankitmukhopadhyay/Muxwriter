@@ -6,6 +6,8 @@ import { TitleBar } from "./components/titlebar/TitleBar";
 import { ResizeHandles } from "./components/titlebar/ResizeHandles";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { SettingsModal } from "./components/settings/SettingsModal";
+import { InsightsModal } from "./components/insights/InsightsModal";
+import { NotesPanel } from "./components/notes/NotesPanel";
 import {
   deriveScenes,
   estimateRuntime,
@@ -54,6 +56,8 @@ function App() {
   // AI partner state.
   const [settings, setSettings] = useState<AppSettings>(() => defaultSettings());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
@@ -231,6 +235,8 @@ function App() {
         onNew={doNew}
         onOpen={() => void doOpen()}
         onSave={() => void doSave()}
+        onNotes={() => setNotesOpen(true)}
+        onInsights={() => setInsightsOpen(true)}
       />
       <div className="workspace">
         <div className="editor-pane">
@@ -270,6 +276,23 @@ function App() {
           settings={settings}
           onSave={handleSaveSettings}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {insightsOpen && (
+        <InsightsModal
+          elements={elements}
+          onClose={() => setInsightsOpen(false)}
+        />
+      )}
+      {notesOpen && (
+        <NotesPanel
+          metadata={metadata}
+          elements={elements}
+          onChange={(next) => {
+            setMetadata(next);
+            setDirty(true);
+          }}
+          onClose={() => setNotesOpen(false)}
         />
       )}
     </div>

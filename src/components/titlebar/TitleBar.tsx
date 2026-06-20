@@ -9,6 +9,8 @@ interface TitleBarProps {
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
+  onNotes: () => void;
+  onInsights: () => void;
 }
 
 /**
@@ -23,6 +25,8 @@ export function TitleBar({
   onNew,
   onOpen,
   onSave,
+  onNotes,
+  onInsights,
 }: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
   const toggleMaximize = () => void appWindow()?.toggleMaximize();
@@ -46,6 +50,18 @@ export function TitleBar({
         </button>
         <button type="button" className="ghostbtn" onClick={onSave} title="Save (Ctrl+S)">
           Save
+        </button>
+        <span className="titlebar__divider" />
+        <button type="button" className="ghostbtn" onClick={onNotes} title="Notes">
+          Notes
+        </button>
+        <button
+          type="button"
+          className="ghostbtn"
+          onClick={onInsights}
+          title="Insights"
+        >
+          Insights
         </button>
       </div>
 
