@@ -6,6 +6,7 @@ import type { ScriptElement } from "../fountain";
 import { buildProposedEdit, type ProposedEdit } from "../editing";
 import type { ChatMessage } from "./types";
 import { TOOLS, runTool } from "./tools";
+import { openaiChat, openaiComplete } from "./openai";
 
 /** Builds an Anthropic client that routes HTTP through Tauri (no CORS). */
 function makeClient(settings: AppSettings): Anthropic {
@@ -20,11 +21,6 @@ function makeClient(settings: AppSettings): Anthropic {
 function requireReady(settings: AppSettings): void {
   if (!activeKey(settings)) {
     throw new Error("No API key set. Open Settings and add your key.");
-  }
-  if (settings.provider === "openai") {
-    throw new Error(
-      "OpenAI support is coming soon. Switch to Anthropic in Settings for now.",
-    );
   }
 }
 
@@ -44,14 +40,13 @@ const MAX_TURNS = 6;
  * tool loop: the model may call search_script / get_scene to pull in past
  * scenes on its own, and we feed the results back until it answers.
  */
-export async function sendChat(
+async function anthropicChat(
   settings: AppSettings,
   systemPrompt: string,
   messages: ChatMessage[],
   elements: ScriptElement[],
   onProposeEdit?: (edit: ProposedEdit) => void,
 ): Promise<string> {
-  requireReady(settings);
   const client = makeClient(settings);
 
   const convo: Anthropic.MessageParam[] = messages.map((m) => ({
@@ -104,4 +99,52 @@ export async function sendChat(
   return "(The partner kept searching the script without reaching an answer. Try narrowing the question.)";
 }
 
-export { makeClient };
+/** One shot Anthropic completion used for background scene summaries. */
+async function anthropicComplete(
+  settings: AppSettings,
+  systemPrompt: string,
+  userText: string,
+): Promise<string> {
+  const client = makeClient(settings);
+  const response = await client.messages.create({
+    model: settings.model,
+    max_tokens: 256,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userText }],
+  });
+  return response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join(" ")
+    .trim();
+}
+
+/**
+ * Sends a brainstorming turn, dispatching to the configured provider. Both run
+ * the agentic tool loop (search_script / get_scene / propose_edit).
+ */
+export async function sendChat(
+  settings: AppSettings,
+  systemPrompt: string,
+  messages: ChatMessage[],
+  elements: ScriptElement[],
+  onProposeEdit?: (edit: ProposedEdit) => void,
+): Promise<string> {
+  requireReady(settings);
+  if (settings.provider === "openai") {
+    return openaiChat(settings, systemPrompt, messages, elements, onProposeEdit);
+  }
+  return anthropicChat(settings, systemPrompt, messages, elements, onProposeEdit);
+}
+
+/** Provider agnostic one shot completion (used for scene summaries). */
+export async function completeText(
+  settings: AppSettings,
+  systemPrompt: string,
+  userText: string,
+): Promise<string> {
+  if (settings.provider === "openai") {
+    return openaiComplete(settings, systemPrompt, userText);
+  }
+  return anthropicComplete(settings, systemPrompt, userText);
+}

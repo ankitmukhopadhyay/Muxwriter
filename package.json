@@ -23,6 +23,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "fountain-js": "^1.2.4",
     "jspdf": "^4.2.1",
+    "openai": "^6.44.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
