@@ -89,6 +89,47 @@ describe("round trip", () => {
   });
 });
 
+describe("transition round trip", () => {
+  it("keeps transitions as transitions when reopened, even unusual ones", () => {
+    const els: ScriptElement[] = [
+      makeElement("scene_heading", "INT. ROOM - DAY"),
+      makeElement("action", "She leaves."),
+      makeElement("transition", "CUT TO:"),
+      makeElement("transition", "SMASH CUT:"),
+      makeElement("transition", "DISSOLVE:"),
+    ];
+    const reparsed = fountainToElements(elementsToFountain(els));
+    const transitions = reparsed.filter((e) => e.type === "transition");
+    expect(transitions).toHaveLength(3);
+    expect(transitions.map((t) => t.text)).toEqual([
+      "CUT TO:",
+      "SMASH CUT:",
+      "DISSOLVE:",
+    ]);
+  });
+});
+
+describe("round trip audit (common screenplay elements)", () => {
+  it("preserves every core element type and character extensions", () => {
+    const els: ScriptElement[] = [
+      makeElement("scene_heading", "INT. KITCHEN - NIGHT"),
+      makeElement("action", "Maya pours coffee."),
+      makeElement("character", "MAYA (V.O.)"),
+      makeElement("parenthetical", "(quietly)"),
+      makeElement("dialogue", "One good scene."),
+      makeElement("transition", "SMASH CUT:"),
+      makeElement("scene_heading", "EXT. ROOFTOP - DAY"),
+      makeElement("action", "Wind."),
+      makeElement("character", "SAM (O.S.)"),
+      makeElement("dialogue", "Maya?"),
+      makeElement("transition", "FADE OUT."),
+    ];
+    const back = fountainToElements(elementsToFountain(els));
+    expect(back.map((e) => e.type)).toEqual(els.map((e) => e.type));
+    expect(back.map((e) => e.text)).toEqual(els.map((e) => e.text));
+  });
+});
+
 describe("deriveScenes", () => {
   it("splits into scenes and parses headings", () => {
     const els = fountainToElements(

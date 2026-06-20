@@ -15,6 +15,7 @@ pub fn run() {
             fs::read_text_file,
             fs::write_text_file,
             fs::write_binary_file,
+            fs::read_binary_file,
             settings::read_settings,
             settings::write_settings
         ])

@@ -4,6 +4,11 @@ import {
   elementsToFountain,
   type ScriptElement,
 } from "../fountain";
+import {
+  buildProposedEdit,
+  buildScriptProposal,
+  type ProposedEdit,
+} from "../editing";
 
 /**
  * Agentic tools the model invokes itself when a reference points outside the
@@ -42,6 +47,25 @@ export const TOOLS: Anthropic.Tool[] = [
           description: "The 1 based scene number to fetch.",
         },
       },
+    },
+  },
+  {
+    name: "write_script",
+    description:
+      "Write a screenplay draft directly into the editor when the writer asks you to write, draft, or generate a script or a large new section. Provide the screenplay as Fountain text in `content` (scene headings like INT./EXT., character cues in caps, dialogue, parentheticals, transitions). The draft is shown to the writer as a diff to accept or reject. Use this instead of pasting a screenplay into the chat.",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "The full screenplay draft as Fountain text.",
+        },
+        note: {
+          type: "string",
+          description: "A one line note on what you wrote.",
+        },
+      },
+      required: ["content"],
     },
   },
   {
@@ -110,6 +134,10 @@ export function runTool(
       .join("\n\n");
   }
 
+  if (name === "write_script" || name === "propose_edit") {
+    return "This tool proposes a change and is handled separately.";
+  }
+
   if (name === "get_scene") {
     let scene = null;
     if (typeof input.scene_id === "string") {
@@ -126,4 +154,34 @@ export function runTool(
   }
 
   return `Unknown tool: ${name}`;
+}
+
+/**
+ * Dispatches any tool call. The proposal tools (write_script, propose_edit)
+ * register a diff for the writer to accept or reject and never change the
+ * script silently; everything else is a read only script query.
+ */
+export function handleToolCall(
+  name: string,
+  input: Record<string, unknown>,
+  elements: ScriptElement[],
+  onProposeEdit?: (edit: ProposedEdit) => void,
+): string {
+  if (name === "write_script") {
+    const edit = buildScriptProposal(elements, input);
+    if (edit && onProposeEdit) {
+      onProposeEdit(edit);
+      return "Wrote a draft into the editor as a proposed change. The writer will accept or reject it.";
+    }
+    return "Could not build the draft.";
+  }
+  if (name === "propose_edit") {
+    const edit = buildProposedEdit(elements, input);
+    if (edit && onProposeEdit) {
+      onProposeEdit(edit);
+      return `Proposed a revision to Scene ${edit.sceneIndex}. The writer will accept or reject it in the editor.`;
+    }
+    return "Could not locate that scene to edit.";
+  }
+  return runTool(name, input, elements);
 }

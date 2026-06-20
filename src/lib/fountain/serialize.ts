@@ -10,8 +10,12 @@ function formatText(type: ElementType, raw: string): string {
   switch (type) {
     case "scene_heading":
     case "character":
-    case "transition":
       return text.toUpperCase();
+    case "transition":
+      // Force the transition with a leading ">" so it always parses back as a
+      // transition, not action. Without this, a transition whose text does not
+      // end in " TO:" (e.g. "SMASH CUT:") becomes action when the file reopens.
+      return text ? `> ${text.toUpperCase()}` : text;
     case "parenthetical": {
       const inner = text.replace(/^\(+|\)+$/g, "").trim();
       return `(${inner})`;

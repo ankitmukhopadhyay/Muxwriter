@@ -19,8 +19,11 @@ export function DiffOverlay({ edit, onAccept, onReject }: DiffOverlayProps) {
     <div className="diff">
       <div className="diff__head">
         <span className="diff__title">
-          Proposed edit · Scene {edit.sceneIndex}
-          {edit.heading ? `: ${edit.heading}` : ""}
+          {edit.scope === "script"
+            ? "Proposed draft · whole script"
+            : `Proposed edit · Scene ${edit.sceneIndex}${
+                edit.heading ? `: ${edit.heading}` : ""
+              }`}
         </span>
         <div className="diff__actions">
           <button type="button" className="diff__reject" onClick={onReject}>

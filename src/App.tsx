@@ -19,6 +19,7 @@ import { emptyMetadata, type MuxwMetadata } from "./lib/muxw";
 import {
   baseName,
   chooseSavePath,
+  importScript,
   openScript,
   readScript,
   writeScript,
@@ -33,9 +34,11 @@ import {
 import {
   buildSystemPrompt,
   buildTurnContext,
+  canTranscribe,
   getMentionables,
   sendChat,
   summarizeCompletedScenes,
+  transcribeAudio,
   type ChatMessage,
 } from "./lib/ai";
 import type { EditorSelection } from "./components/editor/Editor";
@@ -67,6 +70,7 @@ function App() {
     nonce: number;
   } | null>(null);
   const [pendingEdits, setPendingEdits] = useState<ProposedEdit[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -76,6 +80,13 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme;
   }, [settings.theme]);
+
+  // Auto dismiss a notice after a few seconds.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   const toggleTheme = () => {
     const next: AppSettings = {
@@ -115,6 +126,16 @@ function App() {
       loadDocument(result.elements, result.metadata, result.path);
     } catch (err) {
       console.error("Failed to open script:", err);
+    }
+  };
+
+  const doImport = async () => {
+    try {
+      const result = await importScript();
+      if (!result) return;
+      loadDocument(result.elements, result.metadata, result.path);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Import failed.");
     }
   };
 
@@ -248,6 +269,7 @@ function App() {
         runtime={runtime}
         onNew={doNew}
         onOpen={() => void doOpen()}
+        onImport={() => void doImport()}
         onSave={() => void doSave()}
         onSaveAs={() => void doSaveAs()}
         onNotes={() => setNotesOpen(true)}
@@ -296,6 +318,8 @@ function App() {
               m.exportChat(messages, metadata),
             )
           }
+          voiceReady={canTranscribe(settings)}
+          onTranscribe={(blob) => transcribeAudio(settings, blob)}
         />
       </div>
       {settingsOpen && (
@@ -321,6 +345,11 @@ function App() {
           }}
           onClose={() => setNotesOpen(false)}
         />
+      )}
+      {notice && (
+        <div className="toast" role="alert" onClick={() => setNotice(null)}>
+          {notice}
+        </div>
       )}
     </div>
   );

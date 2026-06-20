@@ -3,9 +3,9 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri } from "../platform";
 import { activeKey, type AppSettings } from "../settings";
 import type { ScriptElement } from "../fountain";
-import { buildProposedEdit, type ProposedEdit } from "../editing";
+import { type ProposedEdit } from "../editing";
 import type { ChatMessage } from "./types";
-import { TOOLS, runTool } from "./tools";
+import { TOOLS, handleToolCall } from "./tools";
 import { openaiChat, openaiComplete } from "./openai";
 
 /** Builds an Anthropic client that routes HTTP through Tauri (no CORS). */
@@ -75,18 +75,7 @@ async function anthropicChat(
     for (const block of response.content) {
       if (block.type !== "tool_use") continue;
       const input = block.input as Record<string, unknown>;
-      let output: string;
-      if (block.name === "propose_edit") {
-        const edit = buildProposedEdit(elements, input);
-        if (edit && onProposeEdit) {
-          onProposeEdit(edit);
-          output = `Proposed a revision to Scene ${edit.sceneIndex}. The writer will accept or reject it in the editor.`;
-        } else {
-          output = "Could not locate that scene to edit.";
-        }
-      } else {
-        output = runTool(block.name, input, elements);
-      }
+      const output = handleToolCall(block.name, input, elements, onProposeEdit);
       results.push({
         type: "tool_result",
         tool_use_id: block.id,

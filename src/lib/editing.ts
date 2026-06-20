@@ -14,6 +14,8 @@ import {
 
 export interface ProposedEdit {
   id: string;
+  /** "scene" replaces one scene; "script" writes/replaces the whole script. */
+  scope: "scene" | "script";
   sceneIndex: number;
   heading: string;
   oldText: string;
@@ -92,7 +94,8 @@ export function buildProposedEdit(
   ).trim();
 
   return {
-    id: `edit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: newId(),
+    scope: "scene",
     sceneIndex: scene.index,
     heading: scene.heading,
     oldText,
@@ -101,11 +104,39 @@ export function buildProposedEdit(
   };
 }
 
-/** Applies an accepted edit, replacing the target scene's elements in place. */
+function newId(): string {
+  return `edit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * Builds a whole script proposal from a write_script tool call: the AI's draft
+ * replaces the entire screenplay, shown as a diff against the current script.
+ */
+export function buildScriptProposal(
+  elements: ScriptElement[],
+  input: Record<string, unknown>,
+): ProposedEdit | null {
+  const newText = String(input.content ?? input.new_text ?? "").trim();
+  if (!newText) return null;
+  return {
+    id: newId(),
+    scope: "script",
+    sceneIndex: 0,
+    heading: "",
+    oldText: elementsToFountain(elements).trim(),
+    newText,
+    note: typeof input.note === "string" ? input.note : "",
+  };
+}
+
+/** Applies an accepted edit, replacing the target scene or the whole script. */
 export function applyProposedEdit(
   elements: ScriptElement[],
   edit: ProposedEdit,
 ): ScriptElement[] {
+  if (edit.scope === "script") {
+    return fountainToElements(edit.newText);
+  }
   const scene = deriveScenes(elements).find((s) => s.index === edit.sceneIndex);
   if (!scene) return elements;
   const firstIdx = elements.findIndex((e) => e.id === scene.elementIds[0]);

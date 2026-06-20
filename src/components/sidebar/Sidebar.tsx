@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { linkifyScenes, type ChatMessage, type Mentionable } from "../../lib/ai";
 import type { EditorSelection } from "../editor/Editor";
-import { useSpeechInput } from "./useSpeechInput";
+import { useVoiceInput } from "./useVoiceInput";
 import "./sidebar.css";
 
 interface SidebarProps {
@@ -18,6 +18,8 @@ interface SidebarProps {
   onClearSelection: () => void;
   onJumpToScene: (index: number) => void;
   onExportChat: () => void;
+  voiceReady: boolean;
+  onTranscribe: (blob: Blob) => Promise<string>;
 }
 
 /**
@@ -76,13 +78,16 @@ export function Sidebar({
   onClearSelection,
   onJumpToScene,
   onExportChat,
+  voiceReady,
+  onTranscribe,
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseDraftRef = useRef("");
 
-  const speech = useSpeechInput({
+  const voice = useVoiceInput({
+    transcribe: onTranscribe,
     onResult: (transcript) => {
       const base = baseDraftRef.current;
       setDraft(base ? `${base} ${transcript}` : transcript);
@@ -90,11 +95,26 @@ export function Sidebar({
     onError: (message) => setMicError(message),
   });
 
-  const startVoice = () => {
-    baseDraftRef.current = draft;
-    setMicError(null);
-    speech.start();
+  const handleMic = () => {
+    if (voice.state === "idle") {
+      if (!voiceReady) {
+        setMicError(
+          "Voice input needs an OpenAI API key. Add one in Settings (it works even with an Anthropic chat provider).",
+        );
+        return;
+      }
+      baseDraftRef.current = draft;
+      setMicError(null);
+    }
+    voice.toggle();
   };
+
+  const micStatus =
+    voice.state === "recording"
+      ? "Recording… click the mic to stop"
+      : voice.state === "transcribing"
+        ? "Transcribing…"
+        : null;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -247,11 +267,11 @@ export function Sidebar({
             ))}
           </div>
         )}
-        {(speech.listening || micError) && (
+        {(micStatus || micError) && (
           <div
             className={`composer__status${micError ? " composer__status--error" : ""}`}
           >
-            {micError ?? "Listening… speak now"}
+            {micError ?? micStatus}
           </div>
         )}
         <textarea
@@ -268,12 +288,15 @@ export function Sidebar({
           }}
         />
         <div className="composer__actions">
-          {speech.supported && (
+          {voice.supported && (
             <button
               type="button"
-              className={`composer__mic${speech.listening ? " composer__mic--on" : ""}`}
-              onClick={() => (speech.listening ? speech.stop() : startVoice())}
-              title={speech.listening ? "Stop listening" : "Voice input"}
+              className={`composer__mic${voice.state === "recording" ? " composer__mic--on" : ""}`}
+              onClick={handleMic}
+              disabled={voice.state === "transcribing"}
+              title={
+                voice.state === "recording" ? "Stop recording" : "Voice input"
+              }
               aria-label="Voice input"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

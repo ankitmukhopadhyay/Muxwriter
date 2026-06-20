@@ -26,6 +26,12 @@ pub fn write_binary_file(path: String, bytes: Vec<u8>) -> Result<(), String> {
     fs::write(&path, bytes).map_err(|e| e.to_string())
 }
 
+/// Reads a file as raw bytes. Used for binary imports such as PDF.
+#[tauri::command]
+pub fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
+    fs::read(&path).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

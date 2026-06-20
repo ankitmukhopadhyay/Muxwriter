@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { lineDiff, buildProposedEdit, applyProposedEdit } from "./editing";
+import {
+  lineDiff,
+  buildProposedEdit,
+  buildScriptProposal,
+  applyProposedEdit,
+} from "./editing";
 import { deriveScenes, fountainToElements } from "./fountain";
 
 describe("lineDiff", () => {
@@ -56,5 +61,27 @@ describe("proposed edits", () => {
     expect(scenes[1].heading).toBe("EXT. ROOFTOP - NIGHT");
     expect(next.some((e) => e.text.includes("The city hums."))).toBe(true);
     expect(next.some((e) => e.text === "Wind.")).toBe(false);
+  });
+});
+
+describe("whole script proposals", () => {
+  it("builds a script proposal and applies it as the whole document", () => {
+    const existing = fountainToElements("INT. OLD - DAY\n\nOld action.\n");
+    const draft = "INT. NEW - NIGHT\n\nMaya types.\n\nMAYA\nA new draft.\n";
+    const edit = buildScriptProposal(existing, { content: draft, note: "Draft" });
+    expect(edit).not.toBeNull();
+    expect(edit!.scope).toBe("script");
+    expect(edit!.oldText).toContain("OLD");
+
+    const next = applyProposedEdit(existing, edit!);
+    const scenes = deriveScenes(next);
+    expect(scenes).toHaveLength(1);
+    expect(scenes[0].heading).toBe("INT. NEW - NIGHT");
+    expect(next.some((e) => e.text === "A new draft.")).toBe(true);
+    expect(next.some((e) => e.text === "Old action.")).toBe(false);
+  });
+
+  it("returns null for an empty draft", () => {
+    expect(buildScriptProposal([], { content: "" })).toBeNull();
   });
 });

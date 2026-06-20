@@ -1,6 +1,6 @@
 [package]
 name = "muxwriter"
-version = "0.1.0"
+version = "0.1.1"
 description = "A desktop screenwriting app with an AI brainstorming partner"
 authors = ["Muxwriter contributors"]
 edition = "2021"

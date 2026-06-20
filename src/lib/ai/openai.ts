@@ -3,9 +3,9 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri } from "../platform";
 import { activeKey, type AppSettings } from "../settings";
 import type { ScriptElement } from "../fountain";
-import { buildProposedEdit, type ProposedEdit } from "../editing";
+import { type ProposedEdit } from "../editing";
 import type { ChatMessage } from "./types";
-import { TOOLS, runTool } from "./tools";
+import { TOOLS, handleToolCall } from "./tools";
 
 /**
  * OpenAI provider. Mirrors the Anthropic path but speaks Chat Completions:
@@ -71,18 +71,12 @@ export async function openaiChat(
       } catch {
         args = {};
       }
-      let output: string;
-      if (call.function.name === "propose_edit") {
-        const edit = buildProposedEdit(elements, args);
-        if (edit && onProposeEdit) {
-          onProposeEdit(edit);
-          output = `Proposed a revision to Scene ${edit.sceneIndex}. The writer will accept or reject it in the editor.`;
-        } else {
-          output = "Could not locate that scene to edit.";
-        }
-      } else {
-        output = runTool(call.function.name, args, elements);
-      }
+      const output = handleToolCall(
+        call.function.name,
+        args,
+        elements,
+        onProposeEdit,
+      );
       convo.push({ role: "tool", tool_call_id: call.id, content: output });
     }
   }

@@ -57,7 +57,11 @@ export function fountainToElements(source: string): ScriptElement[] {
   for (const token of parsed.tokens) {
     const type = mapTokenType(token.type);
     if (!type) continue;
-    elements.push(makeElement(type, decode(token.text)));
+    let text = decode(token.text);
+    // A forced transition may keep its leading ">" when it also ends in " TO:";
+    // strip it so the editor shows clean transition text.
+    if (type === "transition") text = text.replace(/^>\s*/, "").trim();
+    elements.push(makeElement(type, text));
   }
 
   if (elements.length === 0) {

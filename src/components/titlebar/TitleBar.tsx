@@ -10,6 +10,7 @@ interface TitleBarProps {
   theme: Theme;
   onNew: () => void;
   onOpen: () => void;
+  onImport: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onNotes: () => void;
@@ -30,6 +31,7 @@ export function TitleBar({
   theme,
   onNew,
   onOpen,
+  onImport,
   onSave,
   onSaveAs,
   onNotes,
@@ -56,6 +58,14 @@ export function TitleBar({
         </button>
         <button type="button" className="ghostbtn" onClick={onOpen} title="Open (Ctrl+O)">
           Open
+        </button>
+        <button
+          type="button"
+          className="ghostbtn"
+          onClick={onImport}
+          title="Import a Fountain or PDF screenplay"
+        >
+          Import
         </button>
         <button type="button" className="ghostbtn" onClick={onSave} title="Save (Ctrl+S)">
           Save
