@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output / distributables
+dist/
+build/
+out/
+release/
+
+# Large binaries / installers (these caused the 100 MB push limit before)
+*.exe
+*.dmg
+*.AppImage
+*.zip
+*.7z
+*.tar.gz
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / tooling
+.vscode/
+.idea/
+.claude/
