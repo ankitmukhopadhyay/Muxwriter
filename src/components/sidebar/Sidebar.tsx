@@ -15,6 +15,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onClearSelection: () => void;
   onJumpToScene: (index: number) => void;
+  onExportChat: () => void;
 }
 
 /** Renders an assistant reply with "Scene N" citations as jump links. */
@@ -57,6 +58,7 @@ export function Sidebar({
   onOpenSettings,
   onClearSelection,
   onJumpToScene,
+  onExportChat,
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -97,13 +99,33 @@ export function Sidebar({
     <aside className="sidebar">
       <header className="sidebar__header">
         <span className="sidebar__title">Brainstorm</span>
-        <button
-          type="button"
-          className="sidebar__settings"
-          onClick={onOpenSettings}
-          title="Settings"
-          aria-label="Settings"
-        >
+        <div className="sidebar__headeractions">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              className="sidebar__settings"
+              onClick={onExportChat}
+              title="Export transcript"
+              aria-label="Export transcript"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M8 1.5v8M5 6.5l3 3 3-3M2.5 12.5h11"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            className="sidebar__settings"
+            onClick={onOpenSettings}
+            title="Settings"
+            aria-label="Settings"
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.3" />
             <path
@@ -113,7 +135,8 @@ export function Sidebar({
               strokeLinecap="round"
             />
           </svg>
-        </button>
+          </button>
+        </div>
       </header>
 
       <div className="sidebar__scroll selectable" ref={scrollRef}>

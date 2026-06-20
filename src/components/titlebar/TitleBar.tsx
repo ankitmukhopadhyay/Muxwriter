@@ -11,6 +11,7 @@ interface TitleBarProps {
   onSave: () => void;
   onNotes: () => void;
   onInsights: () => void;
+  onExportPdf: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ export function TitleBar({
   onSave,
   onNotes,
   onInsights,
+  onExportPdf,
 }: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
   const toggleMaximize = () => void appWindow()?.toggleMaximize();
@@ -62,6 +64,14 @@ export function TitleBar({
           title="Insights"
         >
           Insights
+        </button>
+        <button
+          type="button"
+          className="ghostbtn"
+          onClick={onExportPdf}
+          title="Export the screenplay as a PDF"
+        >
+          Export PDF
         </button>
       </div>
 

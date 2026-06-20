@@ -23,6 +23,12 @@
   color: var(--color-text);
 }
 
+.sidebar__headeractions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .sidebar__settings {
   width: 30px;
   height: 30px;

@@ -20,6 +20,12 @@ pub fn write_text_file(path: String, contents: String) -> Result<(), String> {
     fs::write(&path, contents).map_err(|e| e.to_string())
 }
 
+/// Writes raw bytes to a file. Used for binary exports such as PDF.
+#[tauri::command]
+pub fn write_binary_file(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    fs::write(&path, bytes).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
