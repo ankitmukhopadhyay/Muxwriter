@@ -1,0 +1,57 @@
+name: Release
+
+# Builds the desktop installer and publishes it to a GitHub Release whenever a
+# version tag is pushed (for example: git tag v0.1.0 && git push origin v0.1.0).
+# Windows first; macOS and Linux can be added as extra matrix targets later.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          # - platform: macos-latest
+          # - platform: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Once SignPath access is granted for this open source project, add a
+      # signing step here so released binaries do not trigger SmartScreen.
+
+      - name: Build and publish the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Muxwriter ${{ github.ref_name }}"
+          releaseBody: "Download the installer for your platform below. Muxwriter is BYOK: add your own Anthropic API key in Settings after installing."
+          releaseDraft: true
+          prerelease: false
