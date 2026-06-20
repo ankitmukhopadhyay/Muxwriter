@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   cycleType,
+  deriveScenes,
   makeElement,
   nextTypeOnEnter,
   type ElementType,
@@ -10,11 +11,21 @@ import { ElementBlock } from "./ElementBlock";
 import { ElementRail } from "./ElementRail";
 import "./editor.css";
 
+export interface EditorSelection {
+  text: string;
+  sceneIndex: number;
+  heading: string;
+}
+
 interface EditorProps {
   elements: ScriptElement[];
   onChange: (elements: ScriptElement[]) => void;
   /** Reports the focused element so the app can derive the current scene. */
   onActiveIdChange?: (id: string | null) => void;
+  /** Reports the current text selection for highlight to ask. */
+  onSelectionChange?: (selection: EditorSelection | null) => void;
+  /** When the nonce changes, scrolls the given 1 based scene into view. */
+  jumpRequest?: { index: number; nonce: number } | null;
 }
 
 interface FocusIntent {
@@ -28,7 +39,13 @@ interface FocusIntent {
  * a line merges into the previous element) and caret restoration after the
  * element list is restructured.
  */
-export function Editor({ elements, onChange, onActiveIdChange }: EditorProps) {
+export function Editor({
+  elements,
+  onChange,
+  onActiveIdChange,
+  onSelectionChange,
+  jumpRequest,
+}: EditorProps) {
   const [activeId, setActiveId] = useState<string | null>(
     elements[0]?.id ?? null,
   );
@@ -38,6 +55,38 @@ export function Editor({ elements, onChange, onActiveIdChange }: EditorProps) {
   useEffect(() => {
     onActiveIdChange?.(activeId);
   }, [activeId, onActiveIdChange]);
+
+  // Scroll a cited scene into view when a jump is requested.
+  useEffect(() => {
+    if (!jumpRequest) return;
+    const scene = deriveScenes(elements).find(
+      (s) => s.index === jumpRequest.index,
+    );
+    const headingId = scene?.elementIds[0];
+    const node = headingId ? refs.current.get(headingId) : null;
+    if (node) {
+      node.scrollIntoView({ block: "center", behavior: "smooth" });
+      node.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpRequest?.nonce]);
+
+  const reportSelection = (id: string, node: HTMLTextAreaElement) => {
+    if (!onSelectionChange) return;
+    const text = node.value.slice(node.selectionStart, node.selectionEnd).trim();
+    if (!text) {
+      onSelectionChange(null);
+      return;
+    }
+    const scene = deriveScenes(elements).find((s) =>
+      s.elementIds.includes(id),
+    );
+    onSelectionChange({
+      text,
+      sceneIndex: scene?.index ?? 0,
+      heading: scene?.heading ?? "",
+    });
+  };
 
   // After a structural edit re-renders the list, restore focus and caret.
   useLayoutEffect(() => {
@@ -172,6 +221,7 @@ export function Editor({ elements, onChange, onActiveIdChange }: EditorProps) {
               onChangeText={(text) => setText(el.id, text)}
               onKeyDown={(e) => handleKeyDown(e, el.id)}
               onFocus={() => setActiveId(el.id)}
+              onSelect={(node) => reportSelection(el.id, node)}
               registerRef={(node) => {
                 if (node) refs.current.set(el.id, node);
                 else refs.current.delete(el.id);

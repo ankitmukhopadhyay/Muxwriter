@@ -29,10 +29,13 @@ import {
 } from "./lib/settings";
 import {
   buildSystemPrompt,
+  buildTurnContext,
+  getMentionables,
   sendChat,
   summarizeCompletedScenes,
   type ChatMessage,
 } from "./lib/ai";
+import type { EditorSelection } from "./components/editor/Editor";
 import { isTauri } from "./lib/platform";
 import "./App.css";
 
@@ -52,6 +55,11 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<EditorSelection | null>(null);
+  const [jumpRequest, setJumpRequest] = useState<{
+    index: number;
+    nonce: number;
+  } | null>(null);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -181,7 +189,10 @@ function App() {
         setMetadata(summarized);
         setDirty(true);
       }
-      const system = buildSystemPrompt(meta, elements, currentSceneId);
+      const base = buildSystemPrompt(meta, elements, currentSceneId);
+      const turn = buildTurnContext(elements, text, selection);
+      const system = turn ? `${base}\n\n${turn}` : base;
+      setSelection(null);
       const reply = await sendChat(settings, system, next, elements);
       setMessages([...next, { role: "assistant", content: reply }]);
     } catch (err) {
@@ -212,14 +223,22 @@ function App() {
           elements={elements}
           onChange={handleChange}
           onActiveIdChange={setActiveId}
+          onSelectionChange={setSelection}
+          jumpRequest={jumpRequest}
         />
         <Sidebar
           messages={messages}
           busy={chatBusy}
           error={chatError}
           hasKey={hasKey}
+          mentionables={getMentionables(elements)}
+          selection={selection}
           onSend={(text) => void handleSend(text)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onClearSelection={() => setSelection(null)}
+          onJumpToScene={(index) =>
+            setJumpRequest({ index, nonce: Date.now() })
+          }
         />
       </div>
       {settingsOpen && (

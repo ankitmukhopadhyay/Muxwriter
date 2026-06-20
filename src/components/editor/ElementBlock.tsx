@@ -6,6 +6,7 @@ interface ElementBlockProps {
   onChangeText: (text: string) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFocus: () => void;
+  onSelect: (node: HTMLTextAreaElement) => void;
   registerRef: (node: HTMLTextAreaElement | null) => void;
 }
 
@@ -28,6 +29,7 @@ export function ElementBlock({
   onChangeText,
   onKeyDown,
   onFocus,
+  onSelect,
   registerRef,
 }: ElementBlockProps) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
@@ -54,6 +56,7 @@ export function ElementBlock({
       onChange={(e) => onChangeText(e.target.value)}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
+      onSelect={(e) => onSelect(e.currentTarget)}
     />
   );
 }

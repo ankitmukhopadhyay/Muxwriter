@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import type { ChatMessage } from "../../lib/ai";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { parseCitations, type ChatMessage, type Mentionable } from "../../lib/ai";
+import type { EditorSelection } from "../editor/Editor";
 import { useSpeechInput } from "./useSpeechInput";
 import "./sidebar.css";
 
@@ -8,21 +9,54 @@ interface SidebarProps {
   busy: boolean;
   error: string | null;
   hasKey: boolean;
+  mentionables: Mentionable[];
+  selection: EditorSelection | null;
   onSend: (text: string) => void;
   onOpenSettings: () => void;
+  onClearSelection: () => void;
+  onJumpToScene: (index: number) => void;
 }
 
-/**
- * The AI brainstorming panel: a text chat styled to match the editor, with a
- * composer that supports voice input. Replies are always text.
- */
+/** Renders an assistant reply with "Scene N" citations as jump links. */
+function ReplyBody({
+  text,
+  onJumpToScene,
+}: {
+  text: string;
+  onJumpToScene: (index: number) => void;
+}) {
+  return (
+    <div className="msg__body">
+      {parseCitations(text).map((seg, i) =>
+        seg.type === "scene" ? (
+          <button
+            key={i}
+            type="button"
+            className="citation"
+            onClick={() => onJumpToScene(seg.index)}
+            title={`Jump to Scene ${seg.index}`}
+          >
+            {seg.text}
+          </button>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </div>
+  );
+}
+
 export function Sidebar({
   messages,
   busy,
   error,
   hasKey,
+  mentionables,
+  selection,
   onSend,
   onOpenSettings,
+  onClearSelection,
+  onJumpToScene,
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -34,6 +68,23 @@ export function Sidebar({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, busy]);
+
+  // @ mention autocomplete: active when the draft ends with @query.
+  const mentionQuery = useMemo(() => {
+    const m = draft.match(/@([\w]*)$/);
+    return m ? m[1].toLowerCase() : null;
+  }, [draft]);
+
+  const menuItems = useMemo(() => {
+    if (mentionQuery === null) return [];
+    return mentionables
+      .filter((item) => item.label.toLowerCase().includes(mentionQuery))
+      .slice(0, 6);
+  }, [mentionQuery, mentionables]);
+
+  const pickMention = (item: Mentionable) => {
+    setDraft((d) => d.replace(/@([\w]*)$/, `${item.token} `));
+  };
 
   const submit = () => {
     const text = draft.trim();
@@ -70,8 +121,9 @@ export function Sidebar({
           <div className="sidebar__empty">
             <p>Talk through your story.</p>
             <p className="sidebar__empty-sub">
-              Ask about the current scene, a character's arc, or where to go
-              next. The partner reads your script.
+              Ask about the current scene, mention <code>@Scene 2</code> or a
+              character, or highlight a line and ask. The partner reads your
+              script and cites scenes you can jump to.
             </p>
           </div>
         )}
@@ -80,7 +132,11 @@ export function Sidebar({
             <div className="msg__role">
               {m.role === "user" ? "You" : "Partner"}
             </div>
-            <div className="msg__body">{m.content}</div>
+            {m.role === "assistant" ? (
+              <ReplyBody text={m.content} onJumpToScene={onJumpToScene} />
+            ) : (
+              <div className="msg__body">{m.content}</div>
+            )}
           </div>
         ))}
         {busy && (
@@ -102,15 +158,51 @@ export function Sidebar({
         </button>
       )}
 
+      {selection && (
+        <div className="selchip">
+          <span className="selchip__text">
+            Asking about selection in Scene {selection.sceneIndex}
+          </span>
+          <button
+            type="button"
+            className="selchip__clear"
+            onClick={onClearSelection}
+            aria-label="Clear selection"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="composer">
+        {menuItems.length > 0 && (
+          <div className="mentionmenu">
+            {menuItems.map((item) => (
+              <button
+                key={item.token}
+                type="button"
+                className="mentionmenu__item"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pickMention(item);
+                }}
+              >
+                <span className={`mentionmenu__kind mentionmenu__kind--${item.kind}`}>
+                  {item.kind === "scene" ? "S" : "C"}
+                </span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
         <textarea
           className="composer__input selectable"
-          placeholder="Ask your partner…"
+          placeholder="Ask your partner…  (try @ to mention a scene)"
           value={draft}
           rows={1}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey && menuItems.length === 0) {
               e.preventDefault();
               submit();
             }
