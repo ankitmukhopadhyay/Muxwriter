@@ -3,6 +3,7 @@ import {
   getMentionables,
   buildTurnContext,
   parseCitations,
+  linkifyScenes,
 } from "./references";
 import { fountainToElements } from "../fountain";
 
@@ -53,6 +54,19 @@ describe("buildTurnContext", () => {
 
   it("returns empty when nothing is referenced", () => {
     expect(buildTurnContext(elements, "hello", null)).toBe("");
+  });
+});
+
+describe("linkifyScenes", () => {
+  it("turns Scene references into custom markdown links", () => {
+    expect(linkifyScenes("Tighten Scene 2 then Scene 5.")).toBe(
+      "Tighten [Scene 2](muxw-scene:2) then [Scene 5](muxw-scene:5).",
+    );
+  });
+
+  it("does not double link a Scene that already opens a link", () => {
+    const input = "[Scene 3](muxw-scene:3) is good.";
+    expect(linkifyScenes(input)).toBe(input);
   });
 });
 

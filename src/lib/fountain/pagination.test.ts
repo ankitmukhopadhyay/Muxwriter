@@ -26,6 +26,28 @@ describe("paginate", () => {
   it("always returns at least one page, even when empty", () => {
     expect(paginate([])).toHaveLength(1);
   });
+
+  it("never orphans a scene heading, character cue, or parenthetical at a page bottom", () => {
+    const elements = [];
+    for (let i = 0; i < 40; i++) {
+      elements.push(makeElement("scene_heading", `INT. ROOM ${i} - DAY`));
+      elements.push(
+        makeElement("action", `Action describing room ${i} in some detail.`),
+      );
+      elements.push(makeElement("character", `PERSON ${i}`));
+      elements.push(
+        makeElement("dialogue", `A line spoken by person ${i} that runs on.`),
+      );
+    }
+    const pages = paginate(elements);
+    expect(pages.length).toBeGreaterThan(1);
+    for (let p = 0; p < pages.length - 1; p++) {
+      const last = pages[p][pages[p].length - 1];
+      expect(["scene_heading", "character", "parenthetical"]).not.toContain(
+        last.type,
+      );
+    }
+  });
 });
 
 describe("context aware tab", () => {

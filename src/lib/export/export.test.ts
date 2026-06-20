@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildScriptPdf } from "./pdf";
 import { chatToMarkdown } from "./chat";
-import { fountainToElements } from "../fountain";
+import { fountainToElements, paginate, makeElement } from "../fountain";
 import { emptyMetadata } from "../muxw";
 
 describe("buildScriptPdf", () => {
@@ -16,6 +16,24 @@ describe("buildScriptPdf", () => {
     const header = new TextDecoder().decode(bytes.slice(0, 4));
     expect(header).toBe("%PDF");
     expect(bytes.length).toBeGreaterThan(800);
+  });
+
+  it("renders one PDF page per editor page so the export matches the screen", () => {
+    const elements = [];
+    for (let i = 0; i < 50; i++) {
+      elements.push(makeElement("scene_heading", `INT. ROOM ${i} - DAY`));
+      elements.push(makeElement("action", `Action ${i} fills out the page.`));
+      elements.push(makeElement("character", `PERSON ${i}`));
+      elements.push(makeElement("dialogue", `Dialogue line ${i} keeps going.`));
+    }
+    const expectedPages = paginate(elements).length;
+    expect(expectedPages).toBeGreaterThan(1);
+
+    const bytes = buildScriptPdf(elements, emptyMetadata());
+    const text = new TextDecoder("latin1").decode(bytes);
+    // Count page objects ("/Type /Page" but not "/Type /Pages").
+    const pdfPages = (text.match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+    expect(pdfPages).toBe(expectedPages);
   });
 });
 

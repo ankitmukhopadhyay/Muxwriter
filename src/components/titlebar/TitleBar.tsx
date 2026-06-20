@@ -11,6 +11,7 @@ interface TitleBarProps {
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
+  onSaveAs: () => void;
   onNotes: () => void;
   onInsights: () => void;
   onExportPdf: () => void;
@@ -30,6 +31,7 @@ export function TitleBar({
   onNew,
   onOpen,
   onSave,
+  onSaveAs,
   onNotes,
   onInsights,
   onExportPdf,
@@ -58,6 +60,14 @@ export function TitleBar({
         <button type="button" className="ghostbtn" onClick={onSave} title="Save (Ctrl+S)">
           Save
         </button>
+        <button
+          type="button"
+          className="ghostbtn"
+          onClick={onSaveAs}
+          title="Save As (Ctrl+Shift+S)"
+        >
+          Save As
+        </button>
         <span className="titlebar__divider" />
         <button type="button" className="ghostbtn" onClick={onNotes} title="Notes">
           Notes
@@ -83,7 +93,11 @@ export function TitleBar({
       <div className="titlebar__center" data-tauri-drag-region>
         <span className="titlebar__file">
           {fileName ?? "Untitled"}
-          {dirty && <span className="titlebar__dirty" title="Unsaved changes" />}
+          {dirty && (
+            <span className="titlebar__asterisk" title="Unsaved changes">
+              *
+            </span>
+          )}
         </span>
       </div>
 

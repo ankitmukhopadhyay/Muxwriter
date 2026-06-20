@@ -97,6 +97,19 @@ export type ReplySegment =
   | { type: "text"; text: string }
   | { type: "scene"; index: number; text: string };
 
+/**
+ * Rewrites "Scene N" references into custom markdown links so the markdown
+ * renderer can turn them into clickable citations. The lookbehind skips
+ * occurrences that already open a markdown link.
+ */
+export function linkifyScenes(markdown: string): string {
+  // Skip occurrences that already open a markdown link or sit in inline code.
+  return markdown.replace(
+    /(?<![[`])\bScene (\d+)\b/g,
+    (_m, n) => `[Scene ${n}](muxw-scene:${n})`,
+  );
+}
+
 export function parseCitations(reply: string): ReplySegment[] {
   const segments: ReplySegment[] = [];
   const regex = /Scene\s+(\d+)/g;

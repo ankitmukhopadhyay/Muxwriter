@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { parseCitations, type ChatMessage, type Mentionable } from "../../lib/ai";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { linkifyScenes, type ChatMessage, type Mentionable } from "../../lib/ai";
 import type { EditorSelection } from "../editor/Editor";
 import { useSpeechInput } from "./useSpeechInput";
 import "./sidebar.css";
@@ -18,7 +20,10 @@ interface SidebarProps {
   onExportChat: () => void;
 }
 
-/** Renders an assistant reply with "Scene N" citations as jump links. */
+/**
+ * Renders an assistant reply as markdown (bold, lists, headings, code), with
+ * "Scene N" references rewritten into clickable citations that jump the editor.
+ */
 function ReplyBody({
   text,
   onJumpToScene,
@@ -27,22 +32,34 @@ function ReplyBody({
   onJumpToScene: (index: number) => void;
 }) {
   return (
-    <div className="msg__body">
-      {parseCitations(text).map((seg, i) =>
-        seg.type === "scene" ? (
-          <button
-            key={i}
-            type="button"
-            className="citation"
-            onClick={() => onJumpToScene(seg.index)}
-            title={`Jump to Scene ${seg.index}`}
-          >
-            {seg.text}
-          </button>
-        ) : (
-          <span key={i}>{seg.text}</span>
-        ),
-      )}
+    <div className="msg__body markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a({ href, children }) {
+            if (href && href.startsWith("muxw-scene:")) {
+              const index = Number(href.slice("muxw-scene:".length));
+              return (
+                <button
+                  type="button"
+                  className="citation"
+                  onClick={() => onJumpToScene(index)}
+                  title={`Jump to Scene ${index}`}
+                >
+                  {children}
+                </button>
+              );
+            }
+            return (
+              <a href={href} target="_blank" rel="noreferrer">
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
+        {linkifyScenes(text)}
+      </ReactMarkdown>
     </div>
   );
 }
@@ -61,11 +78,23 @@ export function Sidebar({
   onExportChat,
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
+  const [micError, setMicError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const baseDraftRef = useRef("");
 
-  const speech = useSpeechInput((text) => {
-    setDraft((d) => (d ? `${d} ${text}` : text));
+  const speech = useSpeechInput({
+    onResult: (transcript) => {
+      const base = baseDraftRef.current;
+      setDraft(base ? `${base} ${transcript}` : transcript);
+    },
+    onError: (message) => setMicError(message),
   });
+
+  const startVoice = () => {
+    baseDraftRef.current = draft;
+    setMicError(null);
+    speech.start();
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -218,6 +247,13 @@ export function Sidebar({
             ))}
           </div>
         )}
+        {(speech.listening || micError) && (
+          <div
+            className={`composer__status${micError ? " composer__status--error" : ""}`}
+          >
+            {micError ?? "Listening… speak now"}
+          </div>
+        )}
         <textarea
           className="composer__input selectable"
           placeholder="Ask your partner…  (try @ to mention a scene)"
@@ -236,7 +272,7 @@ export function Sidebar({
             <button
               type="button"
               className={`composer__mic${speech.listening ? " composer__mic--on" : ""}`}
-              onClick={() => (speech.listening ? speech.stop() : speech.start())}
+              onClick={() => (speech.listening ? speech.stop() : startVoice())}
               title={speech.listening ? "Stop listening" : "Voice input"}
               aria-label="Voice input"
             >

@@ -83,5 +83,26 @@ export function paginate(elements: ScriptElement[]): ScriptElement[][] {
   }
 
   pages.push(current);
+  return applyOrphanControl(pages);
+}
+
+/**
+ * A scene heading, character cue, or parenthetical should never be stranded
+ * alone at the bottom of a page (an orphan); it belongs with what follows it.
+ * Push any such trailing elements onto the next page so the break reads the way
+ * real screenwriting software paginates.
+ */
+function applyOrphanControl(pages: ScriptElement[][]): ScriptElement[][] {
+  const keepWithNext = (t: ElementType) =>
+    t === "scene_heading" || t === "character" || t === "parenthetical";
+
+  for (let i = 0; i < pages.length - 1; i++) {
+    while (pages[i].length > 1) {
+      const last = pages[i][pages[i].length - 1];
+      if (!keepWithNext(last.type)) break;
+      pages[i].pop();
+      pages[i + 1].unshift(last);
+    }
+  }
   return pages;
 }

@@ -249,6 +249,7 @@ function App() {
         onNew={doNew}
         onOpen={() => void doOpen()}
         onSave={() => void doSave()}
+        onSaveAs={() => void doSaveAs()}
         onNotes={() => setNotesOpen(true)}
         onInsights={() => setInsightsOpen(true)}
         onExportPdf={() =>

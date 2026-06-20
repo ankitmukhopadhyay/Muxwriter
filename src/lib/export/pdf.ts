@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import type { ElementType, ScriptElement } from "../fountain";
+import { paginate, type ElementType, type ScriptElement } from "../fountain";
 import type { MuxwMetadata } from "../muxw";
 import { isTauri } from "../platform";
 
@@ -12,11 +12,8 @@ import { isTauri } from "../platform";
  * model. Points are 1/72in.
  */
 
-const PAGE_H = 792; // 11in
 const M_TOP = 72; // 1in
-const M_BOTTOM = 72;
 const LINE = 12; // 12pt single spaced
-const CONTENT_BOTTOM = PAGE_H - M_BOTTOM;
 const RIGHT_EDGE = 540; // 7.5in: right margin for right aligned transitions
 
 // Left margin per element type, in points from the page's left edge.
@@ -59,57 +56,79 @@ function isDialogueInner(type: ElementType): boolean {
   return type === "parenthetical" || type === "dialogue";
 }
 
-/** Builds the screenplay PDF and returns it as bytes. */
+/** Blank lines before an element, mirroring the editor's vertical rhythm. */
+function blankLinesBefore(
+  type: ElementType,
+  prevType: ElementType | null,
+  first: boolean,
+): number {
+  if (first) return 0;
+  const contiguous =
+    isDialogueInner(type) &&
+    (prevType === "character" ||
+      prevType === "parenthetical" ||
+      prevType === "dialogue");
+  if (contiguous) return 0;
+  return type === "scene_heading" ? 2 : 1;
+}
+
+/**
+ * Builds the screenplay PDF and returns it as bytes. Renders exactly the page
+ * groups the editor shows, by laying out one paginate() page per PDF page, so
+ * the exported PDF matches what is on screen.
+ */
 export function buildScriptPdf(
   elements: ScriptElement[],
   metadata: MuxwMetadata,
 ): Uint8Array {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
-  doc.setFont("courier", "normal");
   doc.setFontSize(12);
+
+  let started = false;
+  const startPage = () => {
+    if (started) doc.addPage();
+    started = true;
+  };
 
   // Optional title page when a title is set.
   if (metadata.title) {
+    startPage();
     doc.setFont("courier", "bold");
     doc.text(metadata.title.toUpperCase(), 306, 360, { align: "center" });
     doc.setFont("courier", "normal");
     if (metadata.author) {
       doc.text(`written by ${metadata.author}`, 306, 390, { align: "center" });
     }
-    doc.addPage();
   }
 
-  let y = M_TOP + 10;
-  let prevType: ElementType | null = null;
+  const pages = paginate(elements);
+  pages.forEach((pageElements, pageIndex) => {
+    startPage();
 
-  for (const el of elements) {
-    const contiguous =
-      isDialogueInner(el.type) &&
-      (prevType === "character" ||
-        prevType === "parenthetical" ||
-        prevType === "dialogue");
-    if (prevType !== null && !contiguous) {
-      y += LINE; // one blank line between separated elements
+    // Page number top right; page one is unnumbered, as on screen.
+    if (pageIndex > 0) {
+      doc.setFont("courier", "normal");
+      doc.text(`${pageIndex + 1}.`, RIGHT_EDGE, M_TOP - 24, { align: "right" });
     }
 
-    doc.setFont("courier", el.type === "scene_heading" ? "bold" : "normal");
-    const text = formatText(el.type, el.text) || " ";
-    const lines = doc.splitTextToSize(text, WIDTH[el.type]) as string[];
-
-    for (const line of lines) {
-      if (y > CONTENT_BOTTOM) {
-        doc.addPage();
-        y = M_TOP + 10;
+    let y = M_TOP + LINE;
+    let prevType: ElementType | null = null;
+    pageElements.forEach((el, i) => {
+      y += blankLinesBefore(el.type, prevType, i === 0) * LINE;
+      doc.setFont("courier", el.type === "scene_heading" ? "bold" : "normal");
+      const text = formatText(el.type, el.text) || " ";
+      const lines = doc.splitTextToSize(text, WIDTH[el.type]) as string[];
+      for (const line of lines) {
+        if (el.type === "transition") {
+          doc.text(line, RIGHT_EDGE, y, { align: "right" });
+        } else {
+          doc.text(line, LEFT[el.type], y);
+        }
+        y += LINE;
       }
-      if (el.type === "transition") {
-        doc.text(line, RIGHT_EDGE, y, { align: "right" });
-      } else {
-        doc.text(line, LEFT[el.type], y);
-      }
-      y += LINE;
-    }
-    prevType = el.type;
-  }
+      prevType = el.type;
+    });
+  });
 
   return new Uint8Array(doc.output("arraybuffer"));
 }
