@@ -9,6 +9,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::app_version,
+            commands::get_launch_path,
             fs::read_text_file,
             fs::write_text_file
         ])

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Editor } from "./components/editor/Editor";
 import { TitleBar } from "./components/titlebar/TitleBar";
 import { ResizeHandles } from "./components/titlebar/ResizeHandles";
@@ -8,18 +9,22 @@ import {
   SAMPLE_SCRIPT,
   type ScriptElement,
 } from "./lib/fountain";
+import { emptyMetadata, type MuxwMetadata } from "./lib/muxw";
 import {
   baseName,
   chooseSavePath,
   openScript,
+  readScript,
   writeScript,
 } from "./lib/files";
+import { isTauri } from "./lib/platform";
 import "./App.css";
 
 function App() {
   const [elements, setElements] = useState<ScriptElement[]>(() =>
     fountainToElements(SAMPLE_SCRIPT),
   );
+  const [metadata, setMetadata] = useState<MuxwMetadata>(() => emptyMetadata());
   const [filePath, setFilePath] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   // Bumped on open/new so the Editor remounts with a fresh selection.
@@ -30,21 +35,27 @@ function App() {
     setDirty(true);
   };
 
-  const doNew = () => {
-    setElements(fountainToElements(""));
-    setFilePath(null);
+  const loadDocument = (
+    nextElements: ScriptElement[],
+    nextMetadata: MuxwMetadata,
+    path: string | null,
+  ) => {
+    setElements(nextElements);
+    setMetadata(nextMetadata);
+    setFilePath(path);
     setDirty(false);
     setDocKey((k) => k + 1);
+  };
+
+  const doNew = () => {
+    loadDocument(fountainToElements(""), emptyMetadata(), null);
   };
 
   const doOpen = async () => {
     try {
       const result = await openScript();
       if (!result) return;
-      setElements(result.elements);
-      setFilePath(result.path);
-      setDirty(false);
-      setDocKey((k) => k + 1);
+      loadDocument(result.elements, result.metadata, result.path);
     } catch (err) {
       console.error("Failed to open script:", err);
     }
@@ -54,7 +65,7 @@ function App() {
     try {
       const path = await chooseSavePath();
       if (!path) return;
-      await writeScript(path, elements);
+      await writeScript(path, metadata, elements);
       setFilePath(path);
       setDirty(false);
     } catch (err) {
@@ -68,7 +79,7 @@ function App() {
       return;
     }
     try {
-      await writeScript(filePath, elements);
+      await writeScript(filePath, metadata, elements);
       setDirty(false);
     } catch (err) {
       console.error("Failed to save script:", err);
@@ -100,6 +111,21 @@ function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // On startup, open the file the app was launched with (double clicked .muxw).
+  useEffect(() => {
+    if (!isTauri()) return;
+    void (async () => {
+      try {
+        const path = await invoke<string | null>("get_launch_path");
+        if (!path) return;
+        const result = await readScript(path);
+        loadDocument(result.elements, result.metadata, result.path);
+      } catch (err) {
+        console.error("Failed to open launch file:", err);
+      }
+    })();
   }, []);
 
   const runtime = estimateRuntime(elements);
