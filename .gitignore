@@ -6,6 +6,8 @@ dist/
 build/
 out/
 release/
+.vite/
+*.tsbuildinfo
 
 # Large binaries / installers (these caused the 100 MB push limit before)
 *.exe

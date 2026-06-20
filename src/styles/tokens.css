@@ -1,0 +1,98 @@
+/*
+ * Muxwriter design tokens
+ *
+ * The palette is deliberately warm. The chrome is a graphite/ink dark
+ * surface (never pure black), the script page is cream paper, and a single
+ * muted brass accent carries every active state. Restraint everywhere except
+ * that one accent.
+ *
+ * Dark is the default chrome. Light theme overrides live under
+ * [data-theme="light"] and are filled in properly in Phase 8.
+ */
+
+:root,
+[data-theme="dark"] {
+  /* Chrome surfaces (warm graphite, lightest to deepest) */
+  --color-bg: #17140f;
+  --color-surface: #1e1a14;
+  --color-surface-raised: #262019;
+  --color-surface-overlay: #2f2820;
+  --color-border: #38302610;
+  --color-border-strong: #4a4032;
+
+  /* Chrome text */
+  --color-text: #ece4d6;
+  --color-text-muted: #a99f8d;
+  --color-text-faint: #6f6757;
+
+  /* Script page (cream paper, independent of chrome theme) */
+  --color-paper: #f4ecd8;
+  --color-paper-edge: #e7ddc4;
+  --color-ink: #1f1b14;
+  --color-ink-muted: #6b6353;
+
+  /* Brass accent (the signature) */
+  --color-accent: #c2974e;
+  --color-accent-hover: #d4a85c;
+  --color-accent-muted: #8a6f3d;
+  --color-accent-faint: #c2974e22;
+
+  /* Functional */
+  --color-danger: #c25b4e;
+  --color-danger-hover: #d46d5f;
+  --color-success: #7a9b5e;
+  --color-diff-add: #7a9b5e33;
+  --color-diff-remove: #c25b4e33;
+
+  --color-scrollbar: #4a403266;
+  --color-scrollbar-hover: #4a4032aa;
+}
+
+:root {
+  /* Typography ---------------------------------------------------------- */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-script: "Courier Prime", "Courier New", monospace;
+
+  --text-xs: 0.6875rem; /* 11px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.875rem; /* 14px */
+  --text-md: 1rem; /* 16px */
+  --text-lg: 1.25rem; /* 20px */
+  --text-xl: 1.75rem; /* 28px */
+  --text-2xl: 2.5rem; /* 40px */
+
+  /* Script content is always 12pt Courier on screen, matching print */
+  --script-font-size: 12pt;
+  --script-line-height: 1; /* single spaced, 12pt leading */
+
+  /* Spacing ------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* Radii --------------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-window: 10px;
+
+  /* Chrome dimensions --------------------------------------------------- */
+  --titlebar-height: 40px;
+  --rail-width: 52px;
+  --sidebar-width: 380px;
+
+  /* Elevation ----------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px #00000040;
+  --shadow-md: 0 4px 16px #00000055;
+  --shadow-page: 0 8px 40px #00000066;
+
+  /* Motion -------------------------------------------------------------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+}

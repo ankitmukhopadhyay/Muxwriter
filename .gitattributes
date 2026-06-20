@@ -1,0 +1,11 @@
+# Normalize line endings: store text as LF in the repo, let Git handle
+# checkout per platform. Keeps diffs clean across Windows/macOS/Linux.
+* text=auto eol=lf
+
+# Binary assets: never normalize
+*.png binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
