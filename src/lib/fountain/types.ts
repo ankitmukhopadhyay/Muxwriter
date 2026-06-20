@@ -90,10 +90,39 @@ export function nextTypeOnEnter(current: ElementType): ElementType {
   }
 }
 
-/** Cycles to the next (or previous) element type for Tab / Shift+Tab. */
-export function cycleType(current: ElementType, backward = false): ElementType {
-  const i = ELEMENT_CYCLE.indexOf(current);
-  const len = ELEMENT_CYCLE.length;
+/**
+ * The element types Tab should cycle through given what precedes this line.
+ *
+ * Mirrors how real screenwriting software adapts Tab to context: dialogue and
+ * parenthetical are only offered inside a dialogue block (after a character
+ * cue), never on a fresh line where no character has spoken yet. After a
+ * character cue, Tab from the default dialogue lands on parenthetical, as a
+ * writer expects.
+ */
+export function availableTypes(prevType: ElementType | null): ElementType[] {
+  const inDialogue =
+    prevType === "character" ||
+    prevType === "parenthetical" ||
+    prevType === "dialogue";
+  return inDialogue
+    ? ["dialogue", "parenthetical", "character", "action", "scene_heading", "transition"]
+    : ["action", "character", "scene_heading", "transition"];
+}
+
+/**
+ * Context aware Tab / Shift+Tab. Cycles within the types that make sense given
+ * the previous element's type. If the current type is not valid in this
+ * context, Tab snaps to the first sensible type.
+ */
+export function cycleType(
+  current: ElementType,
+  prevType: ElementType | null,
+  backward = false,
+): ElementType {
+  const list = availableTypes(prevType);
+  const i = list.indexOf(current);
+  if (i === -1) return list[0];
+  const len = list.length;
   const next = backward ? (i - 1 + len) % len : (i + 1) % len;
-  return ELEMENT_CYCLE[next];
+  return list[next];
 }

@@ -57,11 +57,22 @@
   overflow: auto;
   display: flex;
   justify-content: center;
+}
+
+/* Pages stack in a column and each grows to its own content. Because this is
+   a column flex (main axis vertical), a page's min-height does not clamp it,
+   so content can never spill past the cream sheet onto the chrome. */
+.pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
   padding: var(--space-6) var(--space-5) var(--space-8);
 }
 
 /* The script page: real document proportions on cream paper ------------- */
 .page {
+  position: relative;
   width: 8.5in;
   min-height: 11in;
   flex-shrink: 0;
@@ -74,6 +85,16 @@
   border-radius: 2px;
   box-shadow: var(--shadow-page);
   cursor: text;
+}
+
+/* Page number in the top right, as on a real script (page 1 is unnumbered). */
+.page__number {
+  position: absolute;
+  top: 0.5in;
+  right: 1in;
+  font-family: var(--font-script);
+  font-size: var(--script-font-size);
+  color: var(--color-ink-muted);
 }
 
 /* Element textareas ----------------------------------------------------- */
@@ -109,7 +130,9 @@
 .element {
   margin-top: 1em;
 }
-.element:first-child {
+/* First element on each page sits at the top margin. first-of-type (not
+   first-child) so an absolutely positioned page number does not offset it. */
+.element:first-of-type {
   margin-top: 0;
 }
 

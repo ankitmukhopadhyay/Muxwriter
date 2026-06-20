@@ -4,6 +4,7 @@ import {
   deriveScenes,
   makeElement,
   nextTypeOnEnter,
+  paginate,
   type ElementType,
   type ScriptElement,
 } from "../../lib/fountain";
@@ -169,7 +170,10 @@ export function Editor({
       splitAt(id, caret);
     } else if (e.key === "Tab") {
       e.preventDefault();
-      setType(id, cycleType(activeType ?? "action", e.shiftKey));
+      const i = indexOf(id);
+      const prevType = i > 0 ? elements[i - 1].type : null;
+      const el = elements[i];
+      setType(id, cycleType(el?.type ?? "action", prevType, e.shiftKey));
     } else if (e.key === "Backspace" && caret === 0 && !hasSelection) {
       const i = indexOf(id);
       if (i > 0) {
@@ -189,13 +193,14 @@ export function Editor({
     }
   };
 
-  const focusLast = () => {
-    const last = elements[elements.length - 1];
-    if (!last) return;
-    pendingFocus.current = { id: last.id, caret: last.text.length };
-    setActiveId(last.id);
+  const focusEnd = (el: ScriptElement | undefined) => {
+    if (!el) return;
+    pendingFocus.current = { id: el.id, caret: el.text.length };
+    setActiveId(el.id);
     onChange([...elements]);
   };
+
+  const pages = paginate(elements);
 
   return (
     <div className="editor">
@@ -204,29 +209,37 @@ export function Editor({
         onPick={(type) => activeId && setType(activeId, type)}
       />
       <div className="editor__scroll">
-        <div
-          className="page"
-          onMouseDown={(e) => {
-            // Clicking the page margin (not an element) focuses the end.
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              focusLast();
-            }
-          }}
-        >
-          {elements.map((el) => (
-            <ElementBlock
-              key={el.id}
-              element={el}
-              onChangeText={(text) => setText(el.id, text)}
-              onKeyDown={(e) => handleKeyDown(e, el.id)}
-              onFocus={() => setActiveId(el.id)}
-              onSelect={(node) => reportSelection(el.id, node)}
-              registerRef={(node) => {
-                if (node) refs.current.set(el.id, node);
-                else refs.current.delete(el.id);
+        <div className="pages">
+          {pages.map((pageElements, pageIndex) => (
+            <div
+              className="page"
+              key={pageIndex}
+              onMouseDown={(e) => {
+                // Clicking a page's margin (not an element) focuses its end.
+                if (e.target === e.currentTarget) {
+                  e.preventDefault();
+                  focusEnd(pageElements[pageElements.length - 1]);
+                }
               }}
-            />
+            >
+              {pageIndex > 0 && (
+                <span className="page__number">{pageIndex + 1}.</span>
+              )}
+              {pageElements.map((el) => (
+                <ElementBlock
+                  key={el.id}
+                  element={el}
+                  onChangeText={(text) => setText(el.id, text)}
+                  onKeyDown={(e) => handleKeyDown(e, el.id)}
+                  onFocus={() => setActiveId(el.id)}
+                  onSelect={(node) => reportSelection(el.id, node)}
+                  registerRef={(node) => {
+                    if (node) refs.current.set(el.id, node);
+                    else refs.current.delete(el.id);
+                  }}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>
