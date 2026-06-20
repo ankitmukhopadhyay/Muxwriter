@@ -16,6 +16,14 @@
   min-height: 0;
 }
 
+/* Holds the editor and anchors the proposed edit diff overlay. */
+.editor-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  position: relative;
+}
+
 /* Invisible resize handles for the frameless window -------------------- */
 .resize {
   position: fixed;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Editor } from "./components/editor/Editor";
+import { DiffOverlay } from "./components/editor/DiffOverlay";
 import { TitleBar } from "./components/titlebar/TitleBar";
 import { ResizeHandles } from "./components/titlebar/ResizeHandles";
 import { Sidebar } from "./components/sidebar/Sidebar";
@@ -36,6 +37,7 @@ import {
   type ChatMessage,
 } from "./lib/ai";
 import type { EditorSelection } from "./components/editor/Editor";
+import { applyProposedEdit, type ProposedEdit } from "./lib/editing";
 import { isTauri } from "./lib/platform";
 import "./App.css";
 
@@ -60,6 +62,7 @@ function App() {
     index: number;
     nonce: number;
   } | null>(null);
+  const [pendingEdits, setPendingEdits] = useState<ProposedEdit[]>([]);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -80,6 +83,7 @@ function App() {
     setFilePath(path);
     setDirty(false);
     setDocKey((k) => k + 1);
+    setPendingEdits([]);
   };
 
   const doNew = () => {
@@ -193,13 +197,24 @@ function App() {
       const turn = buildTurnContext(elements, text, selection);
       const system = turn ? `${base}\n\n${turn}` : base;
       setSelection(null);
-      const reply = await sendChat(settings, system, next, elements);
+      const reply = await sendChat(settings, system, next, elements, (edit) =>
+        setPendingEdits((p) => [...p, edit]),
+      );
       setMessages([...next, { role: "assistant", content: reply }]);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : String(err));
     } finally {
       setChatBusy(false);
     }
+  };
+
+  const acceptEdit = (edit: ProposedEdit) => {
+    setElements((prev) => applyProposedEdit(prev, edit));
+    setDirty(true);
+    setPendingEdits((p) => p.filter((e) => e.id !== edit.id));
+  };
+  const rejectEdit = (edit: ProposedEdit) => {
+    setPendingEdits((p) => p.filter((e) => e.id !== edit.id));
   };
 
   const runtime = estimateRuntime(elements);
@@ -218,14 +233,23 @@ function App() {
         onSave={() => void doSave()}
       />
       <div className="workspace">
-        <Editor
-          key={docKey}
-          elements={elements}
-          onChange={handleChange}
-          onActiveIdChange={setActiveId}
-          onSelectionChange={setSelection}
-          jumpRequest={jumpRequest}
-        />
+        <div className="editor-pane">
+          <Editor
+            key={docKey}
+            elements={elements}
+            onChange={handleChange}
+            onActiveIdChange={setActiveId}
+            onSelectionChange={setSelection}
+            jumpRequest={jumpRequest}
+          />
+          {pendingEdits[0] && (
+            <DiffOverlay
+              edit={pendingEdits[0]}
+              onAccept={() => acceptEdit(pendingEdits[0])}
+              onReject={() => rejectEdit(pendingEdits[0])}
+            />
+          )}
+        </div>
         <Sidebar
           messages={messages}
           busy={chatBusy}

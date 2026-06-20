@@ -1,0 +1,108 @@
+.diff {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  width: min(680px, 70%);
+  max-height: 60%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-accent-muted);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.diff__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.diff__title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.diff__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.diff__reject,
+.diff__accept {
+  padding: 5px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.diff__reject {
+  color: var(--color-text-muted);
+}
+.diff__reject:hover {
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+}
+.diff__accept {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+.diff__accept:hover {
+  background: var(--color-accent-hover);
+}
+
+.diff__note {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.diff__body {
+  margin: 0;
+  padding: var(--space-3) var(--space-2);
+  overflow: auto;
+  font-family: var(--font-script);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.diff__line {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+.diff__sign {
+  width: 1ch;
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+}
+.diff__text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.diff__line--removed {
+  background: var(--color-diff-remove);
+}
+.diff__line--removed .diff__text {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.diff__line--added {
+  background: var(--color-diff-add);
+}
+.diff__line--added .diff__text {
+  color: var(--color-text);
+}
+.diff__line--added .diff__sign {
+  color: var(--color-success);
+}

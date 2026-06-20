@@ -3,6 +3,7 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri } from "../platform";
 import { activeKey, type AppSettings } from "../settings";
 import type { ScriptElement } from "../fountain";
+import { buildProposedEdit, type ProposedEdit } from "../editing";
 import type { ChatMessage } from "./types";
 import { TOOLS, runTool } from "./tools";
 
@@ -48,6 +49,7 @@ export async function sendChat(
   systemPrompt: string,
   messages: ChatMessage[],
   elements: ScriptElement[],
+  onProposeEdit?: (edit: ProposedEdit) => void,
 ): Promise<string> {
   requireReady(settings);
   const client = makeClient(settings);
@@ -76,18 +78,25 @@ export async function sendChat(
 
     const results: Anthropic.ToolResultBlockParam[] = [];
     for (const block of response.content) {
-      if (block.type === "tool_use") {
-        const output = runTool(
-          block.name,
-          block.input as Record<string, unknown>,
-          elements,
-        );
-        results.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: output,
-        });
+      if (block.type !== "tool_use") continue;
+      const input = block.input as Record<string, unknown>;
+      let output: string;
+      if (block.name === "propose_edit") {
+        const edit = buildProposedEdit(elements, input);
+        if (edit && onProposeEdit) {
+          onProposeEdit(edit);
+          output = `Proposed a revision to Scene ${edit.sceneIndex}. The writer will accept or reject it in the editor.`;
+        } else {
+          output = "Could not locate that scene to edit.";
+        }
+      } else {
+        output = runTool(block.name, input, elements);
       }
+      results.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: output,
+      });
     }
     convo.push({ role: "user", content: results });
   }

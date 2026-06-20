@@ -44,6 +44,30 @@ export const TOOLS: Anthropic.Tool[] = [
       },
     },
   },
+  {
+    name: "propose_edit",
+    description:
+      "Propose a revision to a whole scene when the writer asks you to change the script. Provide the full rewritten scene as Fountain text. The change is shown to the writer as a diff to accept or reject; it is never applied silently. Only use this when the writer explicitly asks for an edit.",
+    input_schema: {
+      type: "object",
+      properties: {
+        scene_number: {
+          type: "number",
+          description: "The 1 based scene number to revise.",
+        },
+        scene_id: { type: "string", description: "The scene id to revise." },
+        new_text: {
+          type: "string",
+          description: "The full rewritten scene as Fountain text.",
+        },
+        note: {
+          type: "string",
+          description: "A one line note on what the revision changes and why.",
+        },
+      },
+      required: ["new_text"],
+    },
+  },
 ];
 
 function sceneText(elements: ScriptElement[], elementIds: string[]): string {
