@@ -6,7 +6,12 @@ mod pdf;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![commands::app_version])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::app_version,
+            fs::read_text_file,
+            fs::write_text_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

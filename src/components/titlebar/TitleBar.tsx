@@ -6,6 +6,9 @@ interface TitleBarProps {
   fileName: string | null;
   dirty: boolean;
   runtime: RuntimeEstimate;
+  onNew: () => void;
+  onOpen: () => void;
+  onSave: () => void;
 }
 
 /**
@@ -13,7 +16,14 @@ interface TitleBarProps {
  * `data-tauri-drag-region` so the window can be dragged from them; the window
  * controls and runtime pill are interactive and deliberately omit it.
  */
-export function TitleBar({ fileName, dirty, runtime }: TitleBarProps) {
+export function TitleBar({
+  fileName,
+  dirty,
+  runtime,
+  onNew,
+  onOpen,
+  onSave,
+}: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
   const toggleMaximize = () => void appWindow()?.toggleMaximize();
   const close = () => void appWindow()?.close();
@@ -25,6 +35,18 @@ export function TitleBar({ fileName, dirty, runtime }: TitleBarProps) {
           M
         </span>
         <span className="titlebar__wordmark">Muxwriter</span>
+      </div>
+
+      <div className="titlebar__actions">
+        <button type="button" className="ghostbtn" onClick={onNew} title="New (Ctrl+N)">
+          New
+        </button>
+        <button type="button" className="ghostbtn" onClick={onOpen} title="Open (Ctrl+O)">
+          Open
+        </button>
+        <button type="button" className="ghostbtn" onClick={onSave} title="Save (Ctrl+S)">
+          Save
+        </button>
       </div>
 
       <div className="titlebar__center" data-tauri-drag-region>
