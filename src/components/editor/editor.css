@@ -50,6 +50,18 @@
   background: var(--color-accent-hover);
 }
 
+.rail__btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.rail__divider {
+  width: 18px;
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border-strong);
+}
+
 /* Scrolling page area --------------------------------------------------- */
 .editor__scroll {
   flex: 1;
@@ -165,6 +177,36 @@
 .element--dialogue {
   margin-left: 1in;
   width: 3.5in;
+  margin-top: 0;
+}
+
+/* Dual dialogue: two speakers side by side -------------------------------- */
+.dualblock {
+  display: flex;
+  gap: 0.4in;
+  width: 6in;
+  margin-top: 1em;
+}
+.dualcol {
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Inside a dual column the block uses the column's own width and indents,
+   overriding the full page dialogue geometry. */
+.dualcol .element {
+  width: 100%;
+  margin-left: 0;
+}
+.dualcol .element--character {
+  margin-left: 0;
+  width: 100%;
+  text-align: center;
+}
+.dualcol .element--parenthetical {
+  margin-left: 0.4in;
+  width: auto;
+}
+.dualcol .element:first-of-type {
   margin-top: 0;
 }
 

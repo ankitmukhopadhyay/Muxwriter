@@ -39,6 +39,69 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
 }
+.sidebar__settings--active {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+/* Chat history dropdown ---------------------------------------------------- */
+.chathistory {
+  display: flex;
+  flex-direction: column;
+  max-height: 40%;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-surface-overlay);
+}
+.chathistory__empty {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-faint);
+  font-size: var(--text-sm);
+}
+.chathistory__item {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+}
+.chathistory__item--active {
+  background: var(--color-accent-faint);
+}
+.chathistory__open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  min-width: 0;
+  text-align: left;
+}
+.chathistory__open:hover {
+  background: var(--color-surface-raised);
+}
+.chathistory__name {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.chathistory__time {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+.chathistory__delete {
+  width: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-faint);
+}
+.chathistory__delete:hover {
+  color: var(--color-danger);
+  background: var(--color-surface-raised);
+}
 
 .sidebar__scroll {
   flex: 1;

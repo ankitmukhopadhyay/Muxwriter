@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { linkifyScenes, type ChatMessage, type Mentionable } from "../../lib/ai";
+import type { ChatSession } from "../../lib/chats";
 import type { EditorSelection } from "../editor/Editor";
 import { useVoiceInput } from "./useVoiceInput";
 import "./sidebar.css";
@@ -13,6 +14,11 @@ interface SidebarProps {
   hasKey: boolean;
   mentionables: Mentionable[];
   selection: EditorSelection | null;
+  chats: ChatSession[];
+  activeChatId: string | null;
+  onNewChat: () => void;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
   onSend: (text: string) => void;
   onOpenSettings: () => void;
   onClearSelection: () => void;
@@ -21,6 +27,22 @@ interface SidebarProps {
   voiceReady: boolean;
   onTranscribe: (blob: Blob) => Promise<string>;
   width: number;
+}
+
+/** A short, friendly relative time like "2h ago" or "Apr 3". */
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /**
@@ -74,6 +96,11 @@ export function Sidebar({
   hasKey,
   mentionables,
   selection,
+  chats,
+  activeChatId,
+  onNewChat,
+  onSelectChat,
+  onDeleteChat,
   onSend,
   onOpenSettings,
   onClearSelection,
@@ -85,6 +112,7 @@ export function Sidebar({
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseDraftRef = useRef("");
 
@@ -154,6 +182,40 @@ export function Sidebar({
       <header className="sidebar__header">
         <span className="sidebar__title">Brainstorm</span>
         <div className="sidebar__headeractions">
+          <button
+            type="button"
+            className="sidebar__settings"
+            onClick={onNewChat}
+            title="New chat"
+            aria-label="New chat"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M8 3v10M3 8h10"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`sidebar__settings${historyOpen ? " sidebar__settings--active" : ""}`}
+            onClick={() => setHistoryOpen((v) => !v)}
+            title="Chat history"
+            aria-label="Chat history"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" />
+              <path
+                d="M8 4.5V8l2.5 1.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           {messages.length > 0 && (
             <button
               type="button"
@@ -192,6 +254,47 @@ export function Sidebar({
           </button>
         </div>
       </header>
+
+      {historyOpen && (
+        <div className="chathistory">
+          {chats.length === 0 ? (
+            <div className="chathistory__empty">No saved chats yet.</div>
+          ) : (
+            chats.map((c) => (
+              <div
+                key={c.id}
+                className={`chathistory__item${
+                  c.id === activeChatId ? " chathistory__item--active" : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  className="chathistory__open"
+                  onClick={() => {
+                    onSelectChat(c.id);
+                    setHistoryOpen(false);
+                  }}
+                  title={c.title}
+                >
+                  <span className="chathistory__name">{c.title}</span>
+                  <span className="chathistory__time">
+                    {relativeTime(c.updatedAt)}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="chathistory__delete"
+                  onClick={() => onDeleteChat(c.id)}
+                  title="Delete chat"
+                  aria-label={`Delete chat ${c.title}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       <div className="sidebar__scroll selectable" ref={scrollRef}>
         {messages.length === 0 && (

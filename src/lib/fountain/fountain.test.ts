@@ -5,6 +5,25 @@ import { deriveScenes } from "./scenes";
 import type { ScriptElement } from "./types";
 import { makeElement } from "./types";
 
+describe("dual dialogue", () => {
+  it("round trips the dual flag through Fountain", () => {
+    const elements: ScriptElement[] = [
+      makeElement("character", "BRICK"),
+      makeElement("dialogue", "Screw retirement."),
+      { ...makeElement("character", "STEEL"), dual: true },
+      makeElement("dialogue", "Screw retirement."),
+    ];
+    const fountain = elementsToFountain(elements);
+    expect(fountain).toContain("STEEL ^");
+
+    const parsed = fountainToElements(fountain);
+    const characters = parsed.filter((e) => e.type === "character");
+    expect(characters[0].dual).toBeFalsy();
+    expect(characters[1].dual).toBe(true);
+    expect(characters[1].text).toBe("STEEL");
+  });
+});
+
 describe("fountainToElements", () => {
   it("parses the core element types", () => {
     const source = [

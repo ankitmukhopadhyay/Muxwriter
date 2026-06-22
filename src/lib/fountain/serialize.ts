@@ -43,7 +43,11 @@ export function elementsToFountain(elements: ScriptElement[]): string {
   let prevType: ElementType | null = null;
 
   for (const el of elements) {
-    const text = formatText(el.type, el.text);
+    let text = formatText(el.type, el.text);
+    // A dual dialogue character cue carries a trailing "^" in Fountain.
+    if (el.type === "character" && el.dual && text) {
+      text = `${text} ^`;
+    }
     const contiguous =
       isDialogueInner(el.type) &&
       (prevType === "character" ||

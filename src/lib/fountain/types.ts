@@ -22,6 +22,12 @@ export interface ScriptElement {
   id: string;
   type: ElementType;
   text: string;
+  /**
+   * Marks a character cue (and the dialogue block it begins) as the right hand
+   * side of a dual, side by side dialogue. Only meaningful on `character`
+   * elements; serialized as the trailing `^` Fountain uses for dual dialogue.
+   */
+  dual?: boolean;
 }
 
 /** Order used when cycling element types with Tab / Shift+Tab and in the rail. */

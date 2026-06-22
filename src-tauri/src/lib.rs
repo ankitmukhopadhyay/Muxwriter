@@ -2,6 +2,7 @@ mod commands;
 mod fs;
 mod pdf;
 mod settings;
+mod store;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -17,7 +18,10 @@ pub fn run() {
             fs::write_binary_file,
             fs::read_binary_file,
             settings::read_settings,
-            settings::write_settings
+            settings::write_settings,
+            store::read_app_file,
+            store::write_app_file,
+            store::delete_app_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

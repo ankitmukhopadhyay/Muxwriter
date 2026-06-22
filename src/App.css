@@ -55,6 +55,35 @@
   cursor: pointer;
 }
 
+/* Crash recovery prompt ------------------------------------------------- */
+.recoverybar {
+  position: fixed;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 620px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.recoverybar__text {
+  flex: 1;
+}
+.recoverybar__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 /* Invisible resize handles for the frameless window -------------------- */
 .resize {
   position: fixed;

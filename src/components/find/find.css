@@ -1,0 +1,69 @@
+.findbar {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.findbar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.findbar__input {
+  width: 180px;
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  outline: none;
+}
+.findbar__input:focus {
+  border-color: var(--color-accent-muted);
+}
+
+.findbar__count {
+  min-width: 38px;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.findbar__btn {
+  height: 26px;
+  min-width: 26px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.findbar__btn:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+.findbar__btn:disabled {
+  opacity: 0.4;
+}
+.findbar__btn--active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+.findbar__btn--wide {
+  min-width: 56px;
+}

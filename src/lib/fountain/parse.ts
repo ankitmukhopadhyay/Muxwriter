@@ -54,14 +54,32 @@ export function fountainToElements(source: string): ScriptElement[] {
   const parsed = new Fountain().parse(trimmed, true);
   const elements: ScriptElement[] = [];
 
+  // fountain-js wraps the right hand speaker of a dual dialogue in a
+  // `dialogue_begin` token with `dual: "right"`; the following character cue is
+  // the one to flag. Track that so the next character element is marked dual.
+  let pendingDual = false;
+
   for (const token of parsed.tokens) {
+    if (token.type === "dialogue_begin") {
+      if ((token as { dual?: unknown }).dual === "right") pendingDual = true;
+      continue;
+    }
     const type = mapTokenType(token.type);
     if (!type) continue;
     let text = decode(token.text);
     // A forced transition may keep its leading ">" when it also ends in " TO:";
     // strip it so the editor shows clean transition text.
     if (type === "transition") text = text.replace(/^>\s*/, "").trim();
-    elements.push(makeElement(type, text));
+    const el = makeElement(type, text);
+    // A dual dialogue character cue may also be written with a trailing "^".
+    if (type === "character") {
+      if (pendingDual || /\s*\^\s*$/.test(text)) {
+        el.dual = true;
+        el.text = text.replace(/\s*\^\s*$/, "").trim();
+      }
+      pendingDual = false;
+    }
+    elements.push(el);
   }
 
   if (elements.length === 0) {

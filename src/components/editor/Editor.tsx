@@ -29,11 +29,59 @@ interface EditorProps {
   onSelectionChange?: (selection: EditorSelection | null) => void;
   /** When the nonce changes, scrolls the given 1 based scene into view. */
   jumpRequest?: { index: number; nonce: number } | null;
+  /** When the nonce changes, focuses an element and selects a character range. */
+  revealRequest?: {
+    elementId: string;
+    start: number;
+    end: number;
+    nonce: number;
+  } | null;
 }
 
 interface FocusIntent {
   id: string;
   caret: number;
+}
+
+type Row =
+  | { kind: "single"; el: ScriptElement }
+  | { kind: "dual"; left: ScriptElement[]; right: ScriptElement[] };
+
+function isDialogueInner(type: ElementType): boolean {
+  return type === "parenthetical" || type === "dialogue";
+}
+
+/**
+ * Groups a page's elements into render rows, pairing a normal dialogue block
+ * with the dual ("^") block that immediately follows it so the two can be laid
+ * out side by side. Anything else passes through as a single element.
+ */
+function buildRows(pageEls: ScriptElement[]): Row[] {
+  const rows: Row[] = [];
+  const n = pageEls.length;
+  let i = 0;
+  while (i < n) {
+    const el = pageEls[i];
+    if (el.type === "character" && !el.dual) {
+      const left = [el];
+      let j = i + 1;
+      while (j < n && isDialogueInner(pageEls[j].type)) left.push(pageEls[j++]);
+      if (j < n && pageEls[j].type === "character" && pageEls[j].dual) {
+        const right = [pageEls[j]];
+        let k = j + 1;
+        while (k < n && isDialogueInner(pageEls[k].type)) right.push(pageEls[k++]);
+        rows.push({ kind: "dual", left, right });
+        i = k;
+        continue;
+      }
+      for (const b of left) rows.push({ kind: "single", el: b });
+      i = j;
+      continue;
+    }
+    rows.push({ kind: "single", el });
+    i += 1;
+  }
+  return rows;
 }
 
 /**
@@ -48,6 +96,7 @@ export function Editor({
   onActiveIdChange,
   onSelectionChange,
   jumpRequest,
+  revealRequest,
 }: EditorProps) {
   const [activeId, setActiveId] = useState<string | null>(
     elements[0]?.id ?? null,
@@ -77,6 +126,19 @@ export function Editor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jumpRequest?.nonce]);
+
+  // Reveal a found range: scroll it into view and select it, but do NOT take
+  // focus, so the find bar keeps it and Enter still steps to the next match.
+  // An unfocused textarea still shows the selection (greyed), which is enough.
+  useEffect(() => {
+    if (!revealRequest) return;
+    const node = refs.current.get(revealRequest.elementId);
+    if (node) {
+      node.scrollIntoView({ block: "center", behavior: "smooth" });
+      node.setSelectionRange(revealRequest.start, revealRequest.end);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealRequest?.nonce]);
 
   const reportSelection = (id: string, node: HTMLTextAreaElement) => {
     if (!onSelectionChange) return;
@@ -282,6 +344,36 @@ export function Editor({
     onChange([...elements]);
   };
 
+  const toggleDual = () => {
+    if (!activeEl || activeEl.type !== "character") return;
+    onChange(
+      elements.map((e) =>
+        e.id === activeEl.id ? { ...e, dual: !e.dual } : e,
+      ),
+    );
+  };
+
+  const renderBlock = (el: ScriptElement) => (
+    <ElementBlock
+      key={el.id}
+      element={el}
+      onChangeText={(text) => setText(el.id, text)}
+      onKeyDown={(e) => handleKeyDown(e, el.id)}
+      onFocus={() => {
+        setActiveId(el.id);
+        setFocused(true);
+        setAcDismissed(null);
+        setAcIndex(0);
+      }}
+      onBlur={() => setFocused(false)}
+      onSelect={(node) => reportSelection(el.id, node)}
+      registerRef={(node) => {
+        if (node) refs.current.set(el.id, node);
+        else refs.current.delete(el.id);
+      }}
+    />
+  );
+
   const pages = paginate(elements);
 
   // Position the SmartType menu under the focused element.
@@ -299,6 +391,9 @@ export function Editor({
       <ElementRail
         activeType={activeType}
         onPick={(type) => activeId && setType(activeId, type)}
+        dualEnabled={activeType === "character"}
+        dualActive={!!activeEl?.dual}
+        onToggleDual={toggleDual}
       />
       <div className="editor__scroll">
         <div className="pages">
@@ -316,26 +411,16 @@ export function Editor({
               {pageIndex > 0 && (
                 <span className="page__number">{pageIndex + 1}.</span>
               )}
-              {pageElements.map((el) => (
-                <ElementBlock
-                  key={el.id}
-                  element={el}
-                  onChangeText={(text) => setText(el.id, text)}
-                  onKeyDown={(e) => handleKeyDown(e, el.id)}
-                  onFocus={() => {
-                    setActiveId(el.id);
-                    setFocused(true);
-                    setAcDismissed(null);
-                    setAcIndex(0);
-                  }}
-                  onBlur={() => setFocused(false)}
-                  onSelect={(node) => reportSelection(el.id, node)}
-                  registerRef={(node) => {
-                    if (node) refs.current.set(el.id, node);
-                    else refs.current.delete(el.id);
-                  }}
-                />
-              ))}
+              {buildRows(pageElements).map((row) =>
+                row.kind === "single" ? (
+                  renderBlock(row.el)
+                ) : (
+                  <div className="dualblock" key={`dual-${row.left[0].id}`}>
+                    <div className="dualcol">{row.left.map(renderBlock)}</div>
+                    <div className="dualcol">{row.right.map(renderBlock)}</div>
+                  </div>
+                ),
+              )}
             </div>
           ))}
         </div>
