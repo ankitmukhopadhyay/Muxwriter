@@ -24,6 +24,18 @@
   position: relative;
 }
 
+/* Draggable divider between the editor and the brainstorm panel. */
+.splitter {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--color-border-strong);
+  transition: background var(--dur-fast) var(--ease);
+}
+.splitter:hover {
+  background: var(--color-accent-muted);
+}
+
 /* Transient notice (import errors and the like). */
 .toast {
   position: fixed;

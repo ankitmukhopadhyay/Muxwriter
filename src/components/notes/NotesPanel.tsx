@@ -38,6 +38,14 @@ export function NotesPanel({
   const setGlobal = (value: string) =>
     onChange({ ...metadata, notes: { ...metadata.notes, global: value } });
 
+  const setTitle = (value: string) => onChange({ ...metadata, title: value });
+  const setAuthor = (value: string) => onChange({ ...metadata, author: value });
+  const setLogline = (value: string) =>
+    onChange({
+      ...metadata,
+      storyBible: { ...metadata.storyBible, logline: value },
+    });
+
   const setSceneNote = (value: string) =>
     onChange({
       ...metadata,
@@ -75,6 +83,39 @@ export function NotesPanel({
         </header>
 
         <div className="modal__body notes">
+          <div className="notes__row">
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field__label">Title</span>
+              <input
+                className="notes__input selectable"
+                placeholder="Untitled"
+                value={metadata.title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </label>
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field__label">Author</span>
+              <input
+                className="notes__input selectable"
+                placeholder="Your name"
+                value={metadata.author}
+                onChange={(e) => setAuthor(e.target.value)}
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span className="field__label">
+              Logline (the AI partner reads this)
+            </span>
+            <textarea
+              className="notes__area selectable"
+              rows={2}
+              placeholder="One or two sentences on what the story is about…"
+              value={metadata.storyBible.logline}
+              onChange={(e) => setLogline(e.target.value)}
+            />
+          </label>
+
           <label className="field">
             <span className="field__label">Global story notes</span>
             <textarea

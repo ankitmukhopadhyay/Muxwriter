@@ -71,6 +71,33 @@ function App() {
   } | null>(null);
   const [pendingEdits, setPendingEdits] = useState<ProposedEdit[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = Number(localStorage.getItem("muxwriter.sidebarWidth"));
+    return saved >= 300 && saved <= 760 ? saved : 380;
+  });
+
+  // Drag the splitter to resize the brainstorm panel.
+  const startSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) => {
+      const w = Math.max(300, Math.min(760, window.innerWidth - ev.clientX));
+      setSidebarWidth(w);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      setSidebarWidth((w) => {
+        localStorage.setItem("muxwriter.sidebarWidth", String(w));
+        return w;
+      });
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -97,9 +124,44 @@ function App() {
     void saveSettings(next);
   };
 
-  const handleChange = (next: ScriptElement[]) => {
+  // Document level undo/redo. Native textarea undo does not work because the
+  // textareas are controlled by React state, so the script keeps its own
+  // history. Rapid typing coalesces into ~700ms steps; structural edits
+  // (accepting an AI change) force a new step.
+  const pastRef = useRef<ScriptElement[][]>([]);
+  const futureRef = useRef<ScriptElement[][]>([]);
+  const lastSnapshotRef = useRef(0);
+
+  const commitElements = (next: ScriptElement[], boundary = false) => {
+    const now = Date.now();
+    if (boundary || now - lastSnapshotRef.current >= 700) {
+      pastRef.current.push(elements);
+      if (pastRef.current.length > 300) pastRef.current.shift();
+      futureRef.current = [];
+      lastSnapshotRef.current = now;
+    }
     setElements(next);
     setDirty(true);
+  };
+
+  const undo = () => {
+    if (pastRef.current.length === 0) return;
+    futureRef.current.push(elements);
+    setElements(pastRef.current.pop() as ScriptElement[]);
+    setDirty(true);
+    lastSnapshotRef.current = 0;
+  };
+
+  const redo = () => {
+    if (futureRef.current.length === 0) return;
+    pastRef.current.push(elements);
+    setElements(futureRef.current.pop() as ScriptElement[]);
+    setDirty(true);
+    lastSnapshotRef.current = 0;
+  };
+
+  const handleChange = (next: ScriptElement[]) => {
+    commitElements(next);
   };
 
   const loadDocument = (
@@ -107,6 +169,9 @@ function App() {
     nextMetadata: MuxwMetadata,
     path: string | null,
   ) => {
+    pastRef.current = [];
+    futureRef.current = [];
+    lastSnapshotRef.current = 0;
     setElements(nextElements);
     setMetadata(nextMetadata);
     setFilePath(path);
@@ -164,13 +229,31 @@ function App() {
     }
   };
 
-  const actions = useRef({ doSave, doOpen, doNew, doSaveAs });
-  actions.current = { doSave, doOpen, doNew, doSaveAs };
+  const actions = useRef({ doSave, doOpen, doNew, doSaveAs, undo, redo });
+  actions.current = { doSave, doOpen, doNew, doSaveAs, undo, redo };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const key = e.key.toLowerCase();
+      if (key === "z" || key === "y") {
+        // Only own undo/redo for the script. Chat and notes fields keep their
+        // native textarea history, so let those events pass through.
+        const target = e.target as HTMLElement | null;
+        const inOtherField =
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLInputElement
+            ? !target.className.includes("element")
+            : false;
+        if (inOtherField) return;
+        e.preventDefault();
+        if (key === "y" || (key === "z" && e.shiftKey)) {
+          actions.current.redo();
+        } else {
+          actions.current.undo();
+        }
+        return;
+      }
       if (key === "s" && e.shiftKey) {
         e.preventDefault();
         void actions.current.doSaveAs();
@@ -248,8 +331,8 @@ function App() {
   };
 
   const acceptEdit = (edit: ProposedEdit) => {
-    setElements((prev) => applyProposedEdit(prev, edit));
-    setDirty(true);
+    // An accepted AI change is always its own undo step.
+    commitElements(applyProposedEdit(elements, edit), true);
     setPendingEdits((p) => p.filter((e) => e.id !== edit.id));
   };
   const rejectEdit = (edit: ProposedEdit) => {
@@ -300,6 +383,12 @@ function App() {
             />
           )}
         </div>
+        <div
+          className="splitter"
+          onMouseDown={startSidebarResize}
+          role="separator"
+          aria-label="Resize brainstorm panel"
+        />
         <Sidebar
           messages={messages}
           busy={chatBusy}
@@ -320,6 +409,7 @@ function App() {
           }
           voiceReady={canTranscribe(settings)}
           onTranscribe={(blob) => transcribeAudio(settings, blob)}
+          width={sidebarWidth}
         />
       </div>
       {settingsOpen && (

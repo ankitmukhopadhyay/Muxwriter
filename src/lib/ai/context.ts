@@ -21,9 +21,11 @@ it (for example "Scene 3" or the slugline) so the writer can jump to it.
 When the writer asks you to write, draft, or generate a screenplay or a large
 new section, call the write_script tool with the screenplay as Fountain text
 so it lands in the editor. When they ask you to revise a specific existing
-scene, call propose_edit. Do NOT paste a full screenplay into the chat. Every
-change is shown to the writer as a diff they accept or reject, so never assert
-an edit as done and never rewrite the writer's words without being asked.`;
+scene, call propose_edit. Script content must be PLAIN Fountain, never
+markdown: no bold or italic markers, no headings, no backticks, no bullet or
+numbered lists. Do NOT paste a full screenplay into the chat. Every change is
+shown to the writer as a diff they accept or reject, so never assert an edit
+as done and never rewrite the writer's words without being asked.`;
 
 function formatStoryBible(meta: MuxwMetadata): string {
   const b = meta.storyBible;

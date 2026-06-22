@@ -167,3 +167,35 @@
   width: 3.5in;
   margin-top: 0;
 }
+
+/* SmartType autocomplete -------------------------------------------------- */
+.smarttype {
+  position: fixed;
+  z-index: 60;
+  min-width: 200px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.smarttype__item {
+  text-align: left;
+  padding: 6px var(--space-3);
+  font-family: var(--font-script);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.smarttype__item:hover {
+  background: var(--color-surface-raised);
+}
+.smarttype__item--active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}

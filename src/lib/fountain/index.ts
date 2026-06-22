@@ -10,6 +10,7 @@ export {
   availableTypes,
 } from "./types";
 export { paginate } from "./pagination";
+export { getSuggestions, looksLikeSceneHeading } from "./smarttype";
 export { fountainToElements } from "./parse";
 export { elementsToFountain } from "./serialize";
 export { deriveScenes } from "./scenes";

@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   cycleType,
   deriveScenes,
+  getSuggestions,
+  looksLikeSceneHeading,
   makeElement,
   nextTypeOnEnter,
   paginate,
@@ -37,8 +39,8 @@ interface FocusIntent {
 /**
  * The script page and its element rail. Owns selection, the keyboard grammar
  * (Enter splits and advances type, Tab cycles type, Backspace at the start of
- * a line merges into the previous element) and caret restoration after the
- * element list is restructured.
+ * a line merges into the previous element), SmartType autocomplete, and caret
+ * restoration after the element list is restructured.
  */
 export function Editor({
   elements,
@@ -50,6 +52,10 @@ export function Editor({
   const [activeId, setActiveId] = useState<string | null>(
     elements[0]?.id ?? null,
   );
+  const [focused, setFocused] = useState(false);
+  // SmartType autocomplete state.
+  const [acIndex, setAcIndex] = useState(0);
+  const [acDismissed, setAcDismissed] = useState<string | null>(null);
   const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const pendingFocus = useRef<FocusIntent | null>(null);
 
@@ -102,13 +108,25 @@ export function Editor({
     pendingFocus.current = null;
   });
 
-  const activeType: ElementType | null =
-    elements.find((el) => el.id === activeId)?.type ?? null;
+  const activeEl = elements.find((el) => el.id === activeId) ?? null;
+  const activeType = activeEl?.type ?? null;
 
   const indexOf = (id: string) => elements.findIndex((el) => el.id === id);
 
   const setText = (id: string, text: string) => {
-    onChange(elements.map((el) => (el.id === id ? { ...el, text } : el)));
+    setAcDismissed(null); // typing re-enables autocomplete
+    setAcIndex(0);
+    const el = elements.find((e) => e.id === id);
+    // Auto format: an action line that starts with INT./EXT. becomes a heading.
+    const type =
+      el?.type === "action" && looksLikeSceneHeading(text)
+        ? "scene_heading"
+        : el?.type;
+    onChange(
+      elements.map((e) =>
+        e.id === id ? { ...e, text, type: type ?? e.type } : e,
+      ),
+    );
   };
 
   const setType = (id: string, type: ElementType) => {
@@ -157,6 +175,41 @@ export function Editor({
     return true;
   };
 
+  // SmartType suggestions for the focused element.
+  const suggestions =
+    focused && activeEl && activeEl.text !== acDismissed
+      ? getSuggestions(activeEl.type, activeEl.text, elements)
+      : [];
+  const acIndexClamped = suggestions.length
+    ? Math.min(acIndex, suggestions.length - 1)
+    : 0;
+
+  /** Accept a suggestion, replacing the element text and staying on it. */
+  const acceptSuggestion = (id: string, suggestion: string) => {
+    onChange(
+      elements.map((e) => (e.id === id ? { ...e, text: suggestion } : e)),
+    );
+    pendingFocus.current = { id, caret: suggestion.length };
+    setAcIndex(0);
+    setAcDismissed(suggestion);
+  };
+
+  /** Accept a suggestion and advance to a new next element (Enter). */
+  const acceptAndAdvance = (id: string, suggestion: string) => {
+    const i = indexOf(id);
+    if (i === -1) return;
+    const el = elements[i];
+    const created = makeElement(nextTypeOnEnter(el.type), "");
+    const next = [...elements];
+    next[i] = { ...el, text: suggestion };
+    next.splice(i + 1, 0, created);
+    pendingFocus.current = { id: created.id, caret: 0 };
+    setActiveId(created.id);
+    setAcIndex(0);
+    setAcDismissed(null);
+    onChange(next);
+  };
+
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLTextAreaElement>,
     id: string,
@@ -164,6 +217,35 @@ export function Editor({
     const ta = e.currentTarget;
     const caret = ta.selectionStart;
     const hasSelection = ta.selectionStart !== ta.selectionEnd;
+
+    // SmartType navigation takes precedence while the menu is open.
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setAcIndex((i) => Math.min(i + 1, suggestions.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setAcIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        acceptAndAdvance(id, suggestions[acIndexClamped]);
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        acceptSuggestion(id, suggestions[acIndexClamped]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setAcDismissed(activeEl?.text ?? null);
+        return;
+      }
+    }
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -202,6 +284,16 @@ export function Editor({
 
   const pages = paginate(elements);
 
+  // Position the SmartType menu under the focused element.
+  let acStyle: { top: number; left: number } | null = null;
+  if (suggestions.length > 0 && activeId) {
+    const node = refs.current.get(activeId);
+    if (node) {
+      const r = node.getBoundingClientRect();
+      acStyle = { top: r.bottom + 2, left: r.left };
+    }
+  }
+
   return (
     <div className="editor">
       <ElementRail
@@ -215,7 +307,6 @@ export function Editor({
               className="page"
               key={pageIndex}
               onMouseDown={(e) => {
-                // Clicking a page's margin (not an element) focuses its end.
                 if (e.target === e.currentTarget) {
                   e.preventDefault();
                   focusEnd(pageElements[pageElements.length - 1]);
@@ -231,7 +322,13 @@ export function Editor({
                   element={el}
                   onChangeText={(text) => setText(el.id, text)}
                   onKeyDown={(e) => handleKeyDown(e, el.id)}
-                  onFocus={() => setActiveId(el.id)}
+                  onFocus={() => {
+                    setActiveId(el.id);
+                    setFocused(true);
+                    setAcDismissed(null);
+                    setAcIndex(0);
+                  }}
+                  onBlur={() => setFocused(false)}
                   onSelect={(node) => reportSelection(el.id, node)}
                   registerRef={(node) => {
                     if (node) refs.current.set(el.id, node);
@@ -243,6 +340,24 @@ export function Editor({
           ))}
         </div>
       </div>
+
+      {acStyle && (
+        <div className="smarttype" style={{ top: acStyle.top, left: acStyle.left }}>
+          {suggestions.map((s, i) => (
+            <button
+              key={s}
+              type="button"
+              className={`smarttype__item${
+                i === acIndexClamped ? " smarttype__item--active" : ""
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => activeId && acceptSuggestion(activeId, s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

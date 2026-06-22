@@ -12,6 +12,25 @@ import {
  * voice and trust.
  */
 
+/**
+ * Strips markdown the AI sometimes leaks into script content. A screenplay is
+ * plain Fountain, so bold and code markers, ATX headings, list bullets, and
+ * fenced code blocks do not belong. Fountain's own syntax is left intact:
+ * single * (italics), > (forced transitions), and ( ) (parentheticals).
+ */
+export function sanitizeFountain(text: string): string {
+  return text
+    .replace(/```[\w-]*\n?/g, "") // fenced code block fences
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/\*\*\*([^*]+)\*\*\*/g, "$1") // bold italic
+    .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
+    .replace(/__([^_]+)__/g, "$1") // underline/bold via underscores
+    .replace(/^#{1,6}[ \t]+/gm, "") // ATX headings
+    .replace(/^[ \t]*[-+][ \t]+/gm, "") // bullet list markers
+    .replace(/^[ \t]*\d+\.[ \t]+/gm, "") // numbered list markers
+    .trim();
+}
+
 export interface ProposedEdit {
   id: string;
   /** "scene" replaces one scene; "script" writes/replaces the whole script. */
@@ -86,7 +105,7 @@ export function buildProposedEdit(
   }
   if (!scene) return null;
 
-  const newText = String(input.new_text ?? "").trim();
+  const newText = sanitizeFountain(String(input.new_text ?? ""));
   if (!newText) return null;
 
   const oldText = elementsToFountain(
@@ -116,7 +135,7 @@ export function buildScriptProposal(
   elements: ScriptElement[],
   input: Record<string, unknown>,
 ): ProposedEdit | null {
-  const newText = String(input.content ?? input.new_text ?? "").trim();
+  const newText = sanitizeFountain(String(input.content ?? input.new_text ?? ""));
   if (!newText) return null;
   return {
     id: newId(),

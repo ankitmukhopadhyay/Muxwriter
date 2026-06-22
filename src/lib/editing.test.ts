@@ -4,8 +4,33 @@ import {
   buildProposedEdit,
   buildScriptProposal,
   applyProposedEdit,
+  sanitizeFountain,
 } from "./editing";
 import { deriveScenes, fountainToElements } from "./fountain";
+
+describe("sanitizeFountain", () => {
+  it("removes markdown the AI leaks into a script", () => {
+    const dirty = [
+      "# Act One",
+      "**INT. KITCHEN - NIGHT**",
+      "",
+      "- Maya pours coffee.",
+      "1. She sits down.",
+      "Read the `cursor` blink.",
+    ].join("\n");
+    const clean = sanitizeFountain(dirty);
+    expect(clean).not.toMatch(/[*#`]/);
+    expect(clean).toContain("INT. KITCHEN - NIGHT");
+    expect(clean).toContain("Maya pours coffee.");
+    expect(clean).toContain("She sits down.");
+    expect(clean).toContain("the cursor blink");
+  });
+
+  it("leaves valid Fountain syntax intact", () => {
+    const fountain = "EXT. ROOFTOP - DAY\n\n> CUT TO:\n\n(beat)";
+    expect(sanitizeFountain(fountain)).toBe(fountain);
+  });
+});
 
 describe("lineDiff", () => {
   it("marks removed, added, and unchanged lines", () => {

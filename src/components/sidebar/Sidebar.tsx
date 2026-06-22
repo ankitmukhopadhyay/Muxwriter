@@ -20,6 +20,7 @@ interface SidebarProps {
   onExportChat: () => void;
   voiceReady: boolean;
   onTranscribe: (blob: Blob) => Promise<string>;
+  width: number;
 }
 
 /**
@@ -80,18 +81,22 @@ export function Sidebar({
   onExportChat,
   voiceReady,
   onTranscribe,
+  width,
 }: SidebarProps) {
   const [draft, setDraft] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseDraftRef = useRef("");
 
+  const applyTranscript = (transcript: string) => {
+    const base = baseDraftRef.current;
+    setDraft(base ? `${base} ${transcript}` : transcript);
+  };
+
   const voice = useVoiceInput({
     transcribe: onTranscribe,
-    onResult: (transcript) => {
-      const base = baseDraftRef.current;
-      setDraft(base ? `${base} ${transcript}` : transcript);
-    },
+    onPartial: applyTranscript,
+    onResult: applyTranscript,
     onError: (message) => setMicError(message),
   });
 
@@ -111,9 +116,9 @@ export function Sidebar({
 
   const micStatus =
     voice.state === "recording"
-      ? "Recording… click the mic to stop"
+      ? "Listening… speak, then click the mic to finish"
       : voice.state === "transcribing"
-        ? "Transcribing…"
+        ? "Finishing transcription…"
         : null;
 
   useEffect(() => {
@@ -145,7 +150,7 @@ export function Sidebar({
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" style={{ width }}>
       <header className="sidebar__header">
         <span className="sidebar__title">Brainstorm</span>
         <div className="sidebar__headeractions">

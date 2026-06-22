@@ -52,7 +52,7 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: "write_script",
     description:
-      "Write a screenplay draft directly into the editor when the writer asks you to write, draft, or generate a script or a large new section. Provide the screenplay as Fountain text in `content` (scene headings like INT./EXT., character cues in caps, dialogue, parentheticals, transitions). The draft is shown to the writer as a diff to accept or reject. Use this instead of pasting a screenplay into the chat.",
+      "Write a screenplay draft directly into the editor when the writer asks you to write, draft, or generate a script or a large new section. Provide the screenplay as PLAIN Fountain text in `content` (scene headings like INT./EXT., character cues in caps, dialogue, parentheticals, transitions). Do NOT use any markdown: no **, no #, no backticks, no bullet or numbered lists. The draft is shown to the writer as a diff to accept or reject. Use this instead of pasting a screenplay into the chat.",
     input_schema: {
       type: "object",
       properties: {
@@ -71,7 +71,7 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: "propose_edit",
     description:
-      "Propose a revision to a whole scene when the writer asks you to change the script. Provide the full rewritten scene as Fountain text. The change is shown to the writer as a diff to accept or reject; it is never applied silently. Only use this when the writer explicitly asks for an edit.",
+      "Propose a revision to a whole scene when the writer asks you to change the script. Provide the full rewritten scene as PLAIN Fountain text (no markdown: no **, no #, no backticks, no lists). The change is shown to the writer as a diff to accept or reject; it is never applied silently. Only use this when the writer explicitly asks for an edit.",
     input_schema: {
       type: "object",
       properties: {

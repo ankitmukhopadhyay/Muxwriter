@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Voice input by recording the microphone and transcribing the audio. This
- * replaces the Web Speech API, which starts but never returns a result inside
- * a desktop webview (it reports "no speech" even with a working microphone).
+ * Live voice input. Records the microphone and, while recording, periodically
+ * transcribes the audio captured so far so the text appears as the writer
+ * speaks rather than only after they stop. A final pass on stop gives the most
+ * accurate transcript.
  *
- * getUserMedia and MediaRecorder do work in the webview once microphone access
- * is granted, so we capture audio and hand the blob to a transcribe function.
+ * The Web Speech API is not used: it starts but never returns a result inside
+ * a desktop webview. getUserMedia and MediaRecorder do work once microphone
+ * access is granted, and transcription goes to OpenAI.
  */
 export type VoiceState = "idle" | "recording" | "transcribing";
 
 interface VoiceHandlers {
   transcribe: (blob: Blob) => Promise<string>;
+  /** Live transcript updates while recording (the full text so far). */
+  onPartial: (text: string) => void;
+  /** Final transcript when recording stops. */
   onResult: (text: string) => void;
   onError: (message: string) => void;
 }
@@ -22,8 +27,12 @@ interface VoiceInput {
   toggle: () => void;
 }
 
+/** How often to re-transcribe the audio so far for the live preview. */
+const LIVE_INTERVAL_MS = 1500;
+
 export function useVoiceInput({
   transcribe,
+  onPartial,
   onResult,
   onError,
 }: VoiceHandlers): VoiceInput {
@@ -31,22 +40,31 @@ export function useVoiceInput({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const handlers = useRef({ transcribe, onResult, onError });
-  handlers.current = { transcribe, onResult, onError };
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const busyRef = useRef(false);
+  const handlers = useRef({ transcribe, onPartial, onResult, onError });
+  handlers.current = { transcribe, onPartial, onResult, onError };
 
   const supported =
     typeof navigator !== "undefined" &&
     !!navigator.mediaDevices?.getUserMedia &&
     typeof MediaRecorder !== "undefined";
 
+  const cleanup = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
   useEffect(() => {
     return () => {
       try {
         recorderRef.current?.stop();
-        streamRef.current?.getTracks().forEach((t) => t.stop());
       } catch {
-        // ignore teardown errors
+        // ignore
       }
+      cleanup();
     };
   }, []);
 
@@ -56,10 +74,15 @@ export function useVoiceInput({
       streamRef.current = stream;
       chunksRef.current = [];
       const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+
       recorder.onstop = async () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
         streamRef.current?.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
@@ -82,11 +105,32 @@ export function useVoiceInput({
           setState("idle");
         }
       };
-      recorderRef.current = recorder;
-      recorder.start();
+
+      recorder.start(500); // emit a chunk every 500ms to build the live clip
       setState("recording");
+
+      // Live preview: re-transcribe the audio so far on an interval.
+      timerRef.current = setInterval(async () => {
+        if (busyRef.current || chunksRef.current.length === 0) return;
+        if (recorderRef.current?.state !== "recording") return;
+        busyRef.current = true;
+        try {
+          const blob = new Blob(chunksRef.current, {
+            type: recorder.mimeType || "audio/webm",
+          });
+          const text = await handlers.current.transcribe(blob);
+          if (text && recorderRef.current?.state === "recording") {
+            handlers.current.onPartial(text);
+          }
+        } catch {
+          // Ignore transient partial errors; the final pass surfaces real ones.
+        } finally {
+          busyRef.current = false;
+        }
+      }, LIVE_INTERVAL_MS);
     } catch {
       setState("idle");
+      cleanup();
       handlers.current.onError(
         "Microphone access is blocked. Allow microphone access for Muxwriter and try again.",
       );
