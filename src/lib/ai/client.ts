@@ -3,10 +3,17 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri } from "../platform";
 import { activeKey, type AppSettings } from "../settings";
 import type { ScriptElement } from "../fountain";
+import type { MuxwMetadata } from "../muxw";
 import { type ProposedEdit } from "../editing";
 import type { ChatMessage } from "./types";
 import { TOOLS, handleToolCall } from "./tools";
 import { openaiChat, openaiComplete } from "./openai";
+
+/** Side effects a brainstorming turn may trigger (diffs, metadata writes). */
+export interface ChatActions {
+  onProposeEdit?: (edit: ProposedEdit) => void;
+  onPatchMetadata?: (updater: (m: MuxwMetadata) => MuxwMetadata) => void;
+}
 
 /** Builds an Anthropic client that routes HTTP through Tauri (no CORS). */
 function makeClient(settings: AppSettings): Anthropic {
@@ -45,7 +52,8 @@ async function anthropicChat(
   systemPrompt: string,
   messages: ChatMessage[],
   elements: ScriptElement[],
-  onProposeEdit?: (edit: ProposedEdit) => void,
+  metadata: MuxwMetadata,
+  actions: ChatActions,
 ): Promise<string> {
   const client = makeClient(settings);
 
@@ -75,7 +83,11 @@ async function anthropicChat(
     for (const block of response.content) {
       if (block.type !== "tool_use") continue;
       const input = block.input as Record<string, unknown>;
-      const output = handleToolCall(block.name, input, elements, onProposeEdit);
+      const output = handleToolCall(block.name, input, {
+        elements,
+        metadata,
+        ...actions,
+      });
       results.push({
         type: "tool_result",
         tool_use_id: block.id,
@@ -117,13 +129,14 @@ export async function sendChat(
   systemPrompt: string,
   messages: ChatMessage[],
   elements: ScriptElement[],
-  onProposeEdit?: (edit: ProposedEdit) => void,
+  metadata: MuxwMetadata,
+  actions: ChatActions = {},
 ): Promise<string> {
   requireReady(settings);
   if (settings.provider === "openai") {
-    return openaiChat(settings, systemPrompt, messages, elements, onProposeEdit);
+    return openaiChat(settings, systemPrompt, messages, elements, metadata, actions);
   }
-  return anthropicChat(settings, systemPrompt, messages, elements, onProposeEdit);
+  return anthropicChat(settings, systemPrompt, messages, elements, metadata, actions);
 }
 
 /** Provider agnostic one shot completion (used for scene summaries). */

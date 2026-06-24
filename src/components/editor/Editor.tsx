@@ -3,6 +3,7 @@ import {
   cycleType,
   deriveScenes,
   getSuggestions,
+  groupDualRows,
   looksLikeSceneHeading,
   makeElement,
   nextTypeOnEnter,
@@ -41,47 +42,6 @@ interface EditorProps {
 interface FocusIntent {
   id: string;
   caret: number;
-}
-
-type Row =
-  | { kind: "single"; el: ScriptElement }
-  | { kind: "dual"; left: ScriptElement[]; right: ScriptElement[] };
-
-function isDialogueInner(type: ElementType): boolean {
-  return type === "parenthetical" || type === "dialogue";
-}
-
-/**
- * Groups a page's elements into render rows, pairing a normal dialogue block
- * with the dual ("^") block that immediately follows it so the two can be laid
- * out side by side. Anything else passes through as a single element.
- */
-function buildRows(pageEls: ScriptElement[]): Row[] {
-  const rows: Row[] = [];
-  const n = pageEls.length;
-  let i = 0;
-  while (i < n) {
-    const el = pageEls[i];
-    if (el.type === "character" && !el.dual) {
-      const left = [el];
-      let j = i + 1;
-      while (j < n && isDialogueInner(pageEls[j].type)) left.push(pageEls[j++]);
-      if (j < n && pageEls[j].type === "character" && pageEls[j].dual) {
-        const right = [pageEls[j]];
-        let k = j + 1;
-        while (k < n && isDialogueInner(pageEls[k].type)) right.push(pageEls[k++]);
-        rows.push({ kind: "dual", left, right });
-        i = k;
-        continue;
-      }
-      for (const b of left) rows.push({ kind: "single", el: b });
-      i = j;
-      continue;
-    }
-    rows.push({ kind: "single", el });
-    i += 1;
-  }
-  return rows;
 }
 
 /**
@@ -411,7 +371,7 @@ export function Editor({
               {pageIndex > 0 && (
                 <span className="page__number">{pageIndex + 1}.</span>
               )}
-              {buildRows(pageElements).map((row) =>
+              {groupDualRows(pageElements).map((row) =>
                 row.kind === "single" ? (
                   renderBlock(row.el)
                 ) : (

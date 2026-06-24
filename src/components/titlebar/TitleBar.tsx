@@ -15,7 +15,7 @@ interface TitleBarProps {
   onSaveAs: () => void;
   onNotes: () => void;
   onInsights: () => void;
-  onExportPdf: () => void;
+  onExport: () => void;
   onToggleTheme: () => void;
 }
 
@@ -36,7 +36,7 @@ export function TitleBar({
   onSaveAs,
   onNotes,
   onInsights,
-  onExportPdf,
+  onExport,
   onToggleTheme,
 }: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
@@ -93,10 +93,10 @@ export function TitleBar({
         <button
           type="button"
           className="ghostbtn"
-          onClick={onExportPdf}
-          title="Export the screenplay as a PDF"
+          onClick={onExport}
+          title="Export the screenplay (PDF, Word, Final Draft, Fountain, text)"
         >
-          Export PDF
+          Export
         </button>
       </div>
 

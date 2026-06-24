@@ -40,6 +40,12 @@ export function NotesPanel({
 
   const setTitle = (value: string) => onChange({ ...metadata, title: value });
   const setAuthor = (value: string) => onChange({ ...metadata, author: value });
+  const setContact = (value: string) =>
+    onChange({ ...metadata, contact: value });
+  const setDraftDate = (value: string) =>
+    onChange({ ...metadata, draftDate: value });
+  const setCopyright = (value: string) =>
+    onChange({ ...metadata, copyright: value });
   const setLogline = (value: string) =>
     onChange({
       ...metadata,
@@ -83,6 +89,7 @@ export function NotesPanel({
         </header>
 
         <div className="modal__body notes">
+          <div className="notes__section">Title page</div>
           <div className="notes__row">
             <label className="field" style={{ flex: 1 }}>
               <span className="field__label">Title</span>
@@ -103,6 +110,38 @@ export function NotesPanel({
               />
             </label>
           </div>
+          <div className="notes__row">
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field__label">Draft</span>
+              <input
+                className="notes__input selectable"
+                placeholder="First Draft"
+                value={metadata.draftDate}
+                onChange={(e) => setDraftDate(e.target.value)}
+              />
+            </label>
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field__label">Copyright</span>
+              <input
+                className="notes__input selectable"
+                placeholder="© 2026 Your Name"
+                value={metadata.copyright}
+                onChange={(e) => setCopyright(e.target.value)}
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span className="field__label">Contact</span>
+            <textarea
+              className="notes__area selectable"
+              rows={2}
+              placeholder="Address, phone, or email for the title page"
+              value={metadata.contact}
+              onChange={(e) => setContact(e.target.value)}
+            />
+          </label>
+
+          <div className="notes__section">Story</div>
           <label className="field">
             <span className="field__label">
               Logline (the AI partner reads this)

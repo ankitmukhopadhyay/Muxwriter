@@ -6,31 +6,59 @@ import {
 import type { MuxwMetadata } from "../muxw";
 
 /**
- * Assembles the AI partner's system prompt from the cost controlled context
- * architecture: a persistent story bible, a rolling summary of completed
- * scenes, and the current scene in full. Past scenes are intentionally NOT
- * preloaded here; in Phase 4 the model fetches them on demand via tools.
+ * Assembles the AI partner's system prompt.
+ *
+ * The partner always receives the writer's FULL current script, scene by scene,
+ * plus the story bible and notes. It should never claim it cannot see the
+ * script. Past designs fetched scenes on demand to save tokens; in practice a
+ * working screenplay is small enough to hold in context, and "I don't have the
+ * script" was the single most damaging failure, so the whole script is now
+ * always present. The search_script / get_scene tools remain for precise
+ * citation, and the write tools are how every script and metadata change is
+ * actually made.
  */
 
 const PERSONA = `You are the Muxwriter brainstorming partner: a sharp, warm
-collaborator who helps a screenwriter think through plot, character, structure,
-and craft. You know screenplay format deeply. You are grounded in THIS script,
-not generic advice. Be concise and specific. When you reference a scene, name
-it (for example "Scene 3" or the slugline) so the writer can jump to it.
+collaborator inside the Muxwriter screenwriting app who helps a screenwriter
+think through plot, character, structure, and craft, and who can operate the
+app on the writer's behalf. You know screenplay format and the Fountain markup
+deeply. Be concise, specific, and grounded in THIS script. When you reference a
+scene, name it (for example "Scene 3") so the writer can jump to it.`;
 
-When the writer asks you to write, draft, or generate a screenplay or a large
-new section, call the write_script tool with the screenplay as Fountain text
-so it lands in the editor. When they ask you to revise a specific existing
-scene, call propose_edit. Script content must be PLAIN Fountain, never
-markdown: no bold or italic markers, no headings, no backticks, no bullet or
-numbered lists. Do NOT paste a full screenplay into the chat. Every change is
-shown to the writer as a diff they accept or reject, so never assert an edit
-as done and never rewrite the writer's words without being asked.`;
+const CAPABILITIES = `# What you can do in Muxwriter
+You are not just an advisor; you can act. Use your tools to:
+- Write a brand new screenplay or a large new section into the editor (write_script).
+- Revise, punch up, fix, tighten, rewrite, or change any existing scene (propose_edit).
+- Save notes for the writer: global story notes, a note on a scene, or a note on
+  a character (set_note) for example after analyzing what they have written.
+- Update the story bible and title page: logline, world, tone, themes,
+  relationships, a character, the title, or the author (update_story).
+- Read anywhere in the script to cite precisely (search_script, get_scene).
+You can also explain any of these features in plain language when asked.`;
+
+const GUARDRAILS = `# How to make changes (important)
+- The writer's full current script is included below. NEVER say you cannot see,
+  access, or read the script. Answer questions about it directly from the text.
+- Script text ALWAYS goes through a tool so it appears in the editor, never as a
+  chat message. Do NOT paste, type, or write screenplay lines (sluglines,
+  dialogue, action) into your chat reply. The chat is for discussion only.
+- If the writer asks you to change, revise, edit, fix, punch up, rewrite, cut,
+  or expand something that already exists, call propose_edit for each affected
+  scene. Do NOT use write_script for edits to an existing script, and do NOT
+  reproduce the whole screenplay.
+- Use write_script ONLY to start a script from scratch or add a genuinely new
+  large section when little or nothing exists yet.
+- Every script change is shown to the writer as a diff they accept or reject, so
+  never claim an edit is already done, and never rewrite their words unasked.
+- set_note and update_story apply immediately; confirm briefly what you saved.
+- Keep all script content as PLAIN Fountain: no markdown, no bold or italic
+  markers, no headings, no backticks, no bullet or numbered lists.`;
 
 function formatStoryBible(meta: MuxwMetadata): string {
   const b = meta.storyBible;
   const lines: string[] = [];
   if (meta.title) lines.push(`Title: ${meta.title}`);
+  if (meta.author) lines.push(`Author: ${meta.author}`);
   if (b.logline) lines.push(`Logline: ${b.logline}`);
   if (b.characters.length) {
     lines.push("Characters:");
@@ -45,28 +73,46 @@ function formatStoryBible(meta: MuxwMetadata): string {
   return lines.length ? lines.join("\n") : "(The story bible is empty so far.)";
 }
 
-function formatSceneLog(meta: MuxwMetadata): string {
-  if (!meta.sceneLog.length) {
-    return "(No earlier scenes have been summarized yet.)";
+function formatNotes(meta: MuxwMetadata): string {
+  const parts: string[] = [];
+  if (meta.notes.global.trim()) {
+    parts.push(`Global: ${meta.notes.global.trim()}`);
   }
-  return meta.sceneLog
-    .map((e) => `Scene ${e.index} (${e.heading}): ${e.summary}`)
-    .join("\n");
+  for (const [key, value] of Object.entries(meta.notes.byScene)) {
+    if (value.trim()) parts.push(`Scene ${key}: ${value.trim()}`);
+  }
+  for (const [key, value] of Object.entries(meta.notes.byCharacter)) {
+    if (value.trim()) parts.push(`${key}: ${value.trim()}`);
+  }
+  return parts.length ? parts.join("\n") : "(No notes saved yet.)";
 }
 
-function formatCurrentScene(
+/**
+ * The complete screenplay, scene by scene with scene numbers, so the partner
+ * can answer any question about it and target edits by scene number. The
+ * writer's current cursor scene is flagged.
+ */
+function formatFullScript(
   elements: ScriptElement[],
   currentSceneId: string | null,
 ): string {
+  if (elements.length === 0 || elements.every((el) => !el.text.trim())) {
+    return "(The script is empty. The writer has not written anything yet.)";
+  }
   const scenes = deriveScenes(elements);
-  const scene =
-    scenes.find((s) => s.id === currentSceneId) ?? scenes[scenes.length - 1];
-  if (!scene) return "(The script is empty.)";
-  const sceneElements = elements.filter((el) =>
-    scene.elementIds.includes(el.id),
-  );
-  const header = `Scene ${scene.index}: ${scene.heading || "(untitled)"}`;
-  return `${header}\n\n${elementsToFountain(sceneElements).trim()}`;
+  if (scenes.length === 0) {
+    return elementsToFountain(elements).trim();
+  }
+  return scenes
+    .map((scene) => {
+      const body = elementsToFountain(
+        elements.filter((el) => scene.elementIds.includes(el.id)),
+      ).trim();
+      const cursor =
+        scene.id === currentSceneId ? " (the writer's cursor is here)" : "";
+      return `Scene ${scene.index}${cursor}:\n${body}`;
+    })
+    .join("\n\n");
 }
 
 export function buildSystemPrompt(
@@ -77,13 +123,17 @@ export function buildSystemPrompt(
   return [
     PERSONA,
     "",
+    CAPABILITIES,
+    "",
+    GUARDRAILS,
+    "",
     "# Story bible",
     formatStoryBible(metadata),
     "",
-    "# Summary of earlier scenes",
-    formatSceneLog(metadata),
+    "# Notes the writer has saved",
+    formatNotes(metadata),
     "",
-    "# Current scene (full detail)",
-    formatCurrentScene(elements, currentSceneId),
+    "# The writer's full current script",
+    formatFullScript(elements, currentSceneId),
   ].join("\n");
 }

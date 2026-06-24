@@ -4,11 +4,21 @@ import {
   elementsToFountain,
   type ScriptElement,
 } from "../fountain";
+import type { MuxwMetadata } from "../muxw";
 import {
   buildProposedEdit,
   buildScriptProposal,
   type ProposedEdit,
 } from "../editing";
+import { applySetNote, applyUpdateStory } from "./metaedit";
+
+/** Everything a tool call may read or act on for the current turn. */
+export interface ToolContext {
+  elements: ScriptElement[];
+  metadata: MuxwMetadata;
+  onProposeEdit?: (edit: ProposedEdit) => void;
+  onPatchMetadata?: (updater: (m: MuxwMetadata) => MuxwMetadata) => void;
+}
 
 /**
  * Agentic tools the model invokes itself when a reference points outside the
@@ -92,6 +102,61 @@ export const TOOLS: Anthropic.Tool[] = [
       required: ["new_text"],
     },
   },
+  {
+    name: "set_note",
+    description:
+      "Save a note for the writer in the Notes panel: a global story note, a note on a specific scene, or a note on a character. Use this to record observations after reading the script (for example flagging a pacing issue on a scene, or a continuity note on a character). Notes are appended by default and apply immediately.",
+    input_schema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          enum: ["global", "scene", "character"],
+          description: "Where the note belongs.",
+        },
+        scene_number: {
+          type: "number",
+          description: "The 1 based scene number, when scope is scene.",
+        },
+        character: {
+          type: "string",
+          description: "The character name, when scope is character.",
+        },
+        text: { type: "string", description: "The note text to save." },
+        mode: {
+          type: "string",
+          enum: ["append", "replace"],
+          description: "Append to any existing note (default) or replace it.",
+        },
+      },
+      required: ["scope", "text"],
+    },
+  },
+  {
+    name: "update_story",
+    description:
+      "Update the story bible or title page that the partner and the title page read from: logline, world, tone, themes, central relationships, a character (name plus description), the script title, or the author. Provide only the fields you want to change. Applies immediately.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        author: { type: "string" },
+        logline: { type: "string" },
+        world: { type: "string" },
+        tone: { type: "string" },
+        themes: { type: "string" },
+        relationships: { type: "string" },
+        character: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string" },
+          },
+          required: ["name"],
+        },
+      },
+    },
+  },
 ];
 
 function sceneText(elements: ScriptElement[], elementIds: string[]): string {
@@ -159,14 +224,16 @@ export function runTool(
 /**
  * Dispatches any tool call. The proposal tools (write_script, propose_edit)
  * register a diff for the writer to accept or reject and never change the
- * script silently; everything else is a read only script query.
+ * script silently; the metadata tools (set_note, update_story) apply at once;
+ * everything else is a read only script query.
  */
 export function handleToolCall(
   name: string,
   input: Record<string, unknown>,
-  elements: ScriptElement[],
-  onProposeEdit?: (edit: ProposedEdit) => void,
+  ctx: ToolContext,
 ): string {
+  const { elements, metadata, onProposeEdit, onPatchMetadata } = ctx;
+
   if (name === "write_script") {
     const edit = buildScriptProposal(elements, input);
     if (edit && onProposeEdit) {
@@ -182,6 +249,16 @@ export function handleToolCall(
       return `Proposed a revision to Scene ${edit.sceneIndex}. The writer will accept or reject it in the editor.`;
     }
     return "Could not locate that scene to edit.";
+  }
+  if (name === "set_note") {
+    const result = applySetNote(metadata, input);
+    if (onPatchMetadata) onPatchMetadata((m) => applySetNote(m, input).meta);
+    return result.summary;
+  }
+  if (name === "update_story") {
+    const result = applyUpdateStory(metadata, input);
+    if (onPatchMetadata) onPatchMetadata((m) => applyUpdateStory(m, input).meta);
+    return result.summary;
   }
   return runTool(name, input, elements);
 }

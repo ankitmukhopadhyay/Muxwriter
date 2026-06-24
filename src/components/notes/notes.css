@@ -25,6 +25,21 @@
   outline: none;
 }
 
+.notes__section {
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border-strong);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.notes__section:first-child {
+  margin-top: 0;
+}
+
 .notes__input {
   width: 100%;
   padding: 8px var(--space-3);

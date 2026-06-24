@@ -10,6 +10,8 @@ export {
   availableTypes,
 } from "./types";
 export { paginate } from "./pagination";
+export { groupDualRows } from "./dual";
+export type { DualRow } from "./dual";
 export { getSuggestions, looksLikeSceneHeading } from "./smarttype";
 export { fountainToElements } from "./parse";
 export { elementsToFountain } from "./serialize";

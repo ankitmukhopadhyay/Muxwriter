@@ -53,6 +53,12 @@ export interface MuxwMetadata {
   version: number;
   title: string;
   author: string;
+  /** Title page contact block (address, phone, email). */
+  contact: string;
+  /** Title page draft label, e.g. "First Draft" or a date. */
+  draftDate: string;
+  /** Title page copyright / rights line. */
+  copyright: string;
   storyBible: StoryBible;
   sceneLog: SceneLogEntry[];
   notes: Notes;
@@ -66,6 +72,9 @@ export function emptyMetadata(): MuxwMetadata {
     version: MUXW_VERSION,
     title: "",
     author: "",
+    contact: "",
+    draftDate: "",
+    copyright: "",
     storyBible: {
       logline: "",
       characters: [],
@@ -95,6 +104,9 @@ export function normalizeMetadata(raw: unknown): MuxwMetadata {
     version: typeof obj.version === "number" ? obj.version : MUXW_VERSION,
     title: typeof obj.title === "string" ? obj.title : "",
     author: typeof obj.author === "string" ? obj.author : "",
+    contact: str(obj.contact),
+    draftDate: str(obj.draftDate),
+    copyright: str(obj.copyright),
     storyBible: {
       logline: str(bible.logline),
       characters: Array.isArray(bible.characters)

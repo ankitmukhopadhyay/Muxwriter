@@ -3,7 +3,8 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri } from "../platform";
 import { activeKey, type AppSettings } from "../settings";
 import type { ScriptElement } from "../fountain";
-import { type ProposedEdit } from "../editing";
+import type { MuxwMetadata } from "../muxw";
+import type { ChatActions } from "./client";
 import type { ChatMessage } from "./types";
 import { TOOLS, handleToolCall } from "./tools";
 
@@ -40,7 +41,8 @@ export async function openaiChat(
   systemPrompt: string,
   messages: ChatMessage[],
   elements: ScriptElement[],
-  onProposeEdit?: (edit: ProposedEdit) => void,
+  metadata: MuxwMetadata,
+  actions: ChatActions,
 ): Promise<string> {
   const client = makeClient(settings);
   const convo: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -71,12 +73,11 @@ export async function openaiChat(
       } catch {
         args = {};
       }
-      const output = handleToolCall(
-        call.function.name,
-        args,
+      const output = handleToolCall(call.function.name, args, {
         elements,
-        onProposeEdit,
-      );
+        metadata,
+        ...actions,
+      });
       convo.push({ role: "tool", tool_call_id: call.id, content: output });
     }
   }

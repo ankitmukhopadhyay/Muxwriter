@@ -42,7 +42,9 @@ import {
   type ChatMessage,
 } from "./lib/ai";
 import type { EditorSelection } from "./components/editor/Editor";
+import { ExportDialog } from "./components/export/ExportDialog";
 import { FindReplace } from "./components/find/FindReplace";
+import { StatusBar } from "./components/statusbar/StatusBar";
 import { replaceAll, replaceMatch, type Match } from "./lib/find";
 import { applyProposedEdit, type ProposedEdit } from "./lib/editing";
 import {
@@ -77,6 +79,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -495,9 +498,13 @@ function App() {
       const turn = buildTurnContext(elements, text, selection);
       const system = turn ? `${base}\n\n${turn}` : base;
       setSelection(null);
-      const reply = await sendChat(settings, system, next, elements, (edit) =>
-        setPendingEdits((p) => [...p, edit]),
-      );
+      const reply = await sendChat(settings, system, next, elements, meta, {
+        onProposeEdit: (edit) => setPendingEdits((p) => [...p, edit]),
+        onPatchMetadata: (updater) => {
+          setMetadata((m) => updater(m));
+          setDirty(true);
+        },
+      });
       persistMessages([...next, { role: "assistant", content: reply }]);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : String(err));
@@ -533,11 +540,7 @@ function App() {
         onSaveAs={() => void doSaveAs()}
         onNotes={() => setNotesOpen(true)}
         onInsights={() => setInsightsOpen(true)}
-        onExportPdf={() =>
-          void import("./lib/export").then((m) =>
-            m.exportScriptPdf(elements, metadata),
-          )
-        }
+        onExport={() => setExportOpen(true)}
         theme={settings.theme}
         onToggleTheme={toggleTheme}
       />
@@ -569,6 +572,7 @@ function App() {
               onReject={() => rejectEdit(pendingEdits[0])}
             />
           )}
+          <StatusBar elements={elements} activeId={activeId} />
         </div>
         <div
           className="splitter"
@@ -626,6 +630,14 @@ function App() {
             setDirty(true);
           }}
           onClose={() => setNotesOpen(false)}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          elements={elements}
+          metadata={metadata}
+          onClose={() => setExportOpen(false)}
+          onDone={(message) => setNotice(message)}
         />
       )}
       {notice && (
