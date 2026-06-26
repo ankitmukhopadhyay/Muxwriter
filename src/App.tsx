@@ -37,13 +37,13 @@ import {
   canTranscribe,
   getMentionables,
   sendChat,
-  summarizeCompletedScenes,
   transcribeAudio,
   type ChatMessage,
 } from "./lib/ai";
 import type { EditorSelection } from "./components/editor/Editor";
 import { ExportDialog } from "./components/export/ExportDialog";
 import { FindReplace } from "./components/find/FindReplace";
+import { SceneNavigator } from "./components/outline/SceneNavigator";
 import { StatusBar } from "./components/statusbar/StatusBar";
 import { replaceAll, replaceMatch, type Match } from "./lib/find";
 import { applyProposedEdit, type ProposedEdit } from "./lib/editing";
@@ -80,6 +80,7 @@ function App() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -485,20 +486,13 @@ function App() {
     setChatBusy(true);
     setChatError(null);
     try {
-      // Roll completed scenes into the summary log so context stays compact,
-      // then assemble context from the freshest metadata.
-      let meta = metadata;
-      const summarized = await summarizeCompletedScenes(settings, meta, elements);
-      if (summarized) {
-        meta = summarized;
-        setMetadata(summarized);
-        setDirty(true);
-      }
-      const base = buildSystemPrompt(meta, elements, currentSceneId);
+      // The full script is always in context now, so there is no separate
+      // summary pass; build the prompt straight from the current metadata.
+      const base = buildSystemPrompt(metadata, elements, currentSceneId);
       const turn = buildTurnContext(elements, text, selection);
       const system = turn ? `${base}\n\n${turn}` : base;
       setSelection(null);
-      const reply = await sendChat(settings, system, next, elements, meta, {
+      const reply = await sendChat(settings, system, next, elements, metadata, {
         onProposeEdit: (edit) => setPendingEdits((p) => [...p, edit]),
         onPatchMetadata: (updater) => {
           setMetadata((m) => updater(m));
@@ -541,10 +535,20 @@ function App() {
         onNotes={() => setNotesOpen(true)}
         onInsights={() => setInsightsOpen(true)}
         onExport={() => setExportOpen(true)}
+        onToggleOutline={() => setOutlineOpen((v) => !v)}
+        outlineOpen={outlineOpen}
         theme={settings.theme}
         onToggleTheme={toggleTheme}
       />
       <div className="workspace">
+        {outlineOpen && (
+          <SceneNavigator
+            elements={elements}
+            activeId={activeId}
+            onJump={(index) => setJumpRequest({ index, nonce: Date.now() })}
+            onClose={() => setOutlineOpen(false)}
+          />
+        )}
         <div className="editor-pane">
           <Editor
             key={docKey}

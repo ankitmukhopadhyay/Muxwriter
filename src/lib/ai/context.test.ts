@@ -61,4 +61,17 @@ describe("buildSystemPrompt", () => {
     const prompt = buildSystemPrompt(emptyMetadata(), fountainToElements(""), null);
     expect(prompt.toLowerCase()).toContain("script is empty");
   });
+
+  it("teaches the exact dual dialogue syntax and forbids separators", () => {
+    const prompt = buildSystemPrompt(emptyMetadata(), fountainToElements(SCRIPT), null);
+    // The caret on the second cue is the only correct marker.
+    expect(prompt).toContain("STEEL ^");
+    expect(prompt.toLowerCase()).toContain("use a slash, backslash");
+  });
+
+  it("forbids editorial markers inside the script", () => {
+    const prompt = buildSystemPrompt(emptyMetadata(), fountainToElements(SCRIPT), null);
+    expect(prompt.toLowerCase()).toContain("only real screenplay content");
+    expect(prompt).toContain("DUAL DIALOGUE BEGINS HERE");
+  });
 });

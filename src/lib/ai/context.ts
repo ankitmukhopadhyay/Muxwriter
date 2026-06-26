@@ -36,6 +36,36 @@ You are not just an advisor; you can act. Use your tools to:
 - Read anywhere in the script to cite precisely (search_script, get_scene).
 You can also explain any of these features in plain language when asked.`;
 
+const FORMAT_REFERENCE = `# Writing Fountain for this app (follow exactly)
+All script content is PLAIN Fountain. The elements:
+- Scene heading: a line starting INT. / EXT. / EST. / INT./EXT., e.g. INT. KITCHEN - NIGHT
+- Action: ordinary prose lines describing what happens.
+- Character cue: the speaker's name in CAPS on its own line, e.g. MAYA
+- Parenthetical: a short direction in parentheses under a cue, e.g. (whispering)
+- Dialogue: the spoken line(s) directly under a character cue.
+- Transition: a line ending in TO:, e.g. CUT TO:
+
+Dual dialogue (two characters speaking at the same time, shown side by side):
+write the FIRST character's block normally, then the SECOND character's cue with
+a caret appended after the name: "NAME ^". Nothing else makes dual dialogue.
+Correct example, exactly:
+
+BRICK
+Screw retirement.
+
+STEEL ^
+Screw retirement.
+
+The trailing " ^" on the second cue is the ONLY way to mark dual dialogue. NEVER
+use a slash, backslash, pipe, "or", or any other separator, and NEVER put two
+character names or two dialogue lines on one line.
+
+CRITICAL: only real screenplay content belongs in the script. NEVER insert
+editorial labels, markers, banners, instructions, or commentary into the script
+itself (for example "DUAL DIALOGUE BEGINS HERE", "<<...>>", "[explanation]", or
+"as you can see"). If you want to explain or teach something, say it in the
+chat reply; the script holds only the screenplay.`;
+
 const GUARDRAILS = `# How to make changes (important)
 - The writer's full current script is included below. NEVER say you cannot see,
   access, or read the script. Answer questions about it directly from the text.
@@ -124,6 +154,8 @@ export function buildSystemPrompt(
     PERSONA,
     "",
     CAPABILITIES,
+    "",
+    FORMAT_REFERENCE,
     "",
     GUARDRAILS,
     "",

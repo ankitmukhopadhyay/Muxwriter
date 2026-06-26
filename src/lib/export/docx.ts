@@ -1,11 +1,16 @@
 import {
   AlignmentType,
+  BorderStyle,
   Document,
   Packer,
   Paragraph,
+  Table,
+  TableCell,
+  TableRow,
   TextRun,
+  WidthType,
 } from "docx";
-import type { ElementType, ScriptElement } from "../fountain";
+import { groupDualRows, type ElementType, type ScriptElement } from "../fountain";
 import type { MuxwMetadata } from "../muxw";
 import { saveBinaryExport } from "./save";
 import { titlePage, type ExportOptions } from "./titlepage";
@@ -86,6 +91,55 @@ function elementParagraph(
   });
 }
 
+/** Paragraphs for one speaker inside a dual dialogue column (narrow cell). */
+function dualCellParagraphs(block: ScriptElement[]): Paragraph[] {
+  return block.map((el, i) => {
+    const center = el.type === "character";
+    return new Paragraph({
+      alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT,
+      indent: el.type === "parenthetical" ? { left: 360 } : undefined,
+      spacing: { before: i === 0 ? 0 : 0, after: 0, line: 240 },
+      children: [
+        new TextRun({
+          text: format(el.type, el.text) || " ",
+          font: FONT,
+          size: SIZE,
+        }),
+      ],
+    });
+  });
+}
+
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: "auto" } as const;
+
+/** A borderless two column table laying dual dialogue out side by side. */
+function dualTable(left: ScriptElement[], right: ScriptElement[]): Table {
+  const cell = (block: ScriptElement[]) =>
+    new TableCell({
+      width: { size: 50, type: WidthType.PERCENTAGE },
+      margins: { top: 120, bottom: 0, left: 80, right: 80 },
+      borders: {
+        top: NO_BORDER,
+        bottom: NO_BORDER,
+        left: NO_BORDER,
+        right: NO_BORDER,
+      },
+      children: dualCellParagraphs(block),
+    });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: NO_BORDER,
+      bottom: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+      insideHorizontal: NO_BORDER,
+      insideVertical: NO_BORDER,
+    },
+    rows: [new TableRow({ children: [cell(left), cell(right)] })],
+  });
+}
+
 function titlePageParagraphs(metadata: MuxwMetadata): Paragraph[] {
   const t = titlePage(metadata);
   const center = (text: string, bold = false, before = 0) =>
@@ -113,11 +167,17 @@ export async function buildDocx(
   metadata: MuxwMetadata,
   options: ExportOptions,
 ): Promise<Uint8Array> {
-  const body: Paragraph[] = [];
+  const body: (Paragraph | Table)[] = [];
   let prevType: ElementType | null = null;
-  elements.forEach((el, i) => {
-    body.push(elementParagraph(el, prevType, i === 0));
-    prevType = el.type;
+  const rows = groupDualRows(elements);
+  rows.forEach((row, i) => {
+    if (row.kind === "single") {
+      body.push(elementParagraph(row.el, prevType, i === 0));
+      prevType = row.el.type;
+    } else {
+      body.push(dualTable(row.left, row.right));
+      prevType = "dialogue";
+    }
   });
 
   const sectionProps = {

@@ -1,7 +1,6 @@
 export { buildSystemPrompt } from "./context";
 export { sendChat } from "./client";
 export { transcribeAudio, canTranscribe } from "./transcribe";
-export { summarizeCompletedScenes } from "./summarize";
 export { TOOLS, runTool } from "./tools";
 export {
   getMentionables,

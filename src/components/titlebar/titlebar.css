@@ -69,6 +69,10 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
 }
+.ghostbtn--active {
+  background: var(--color-accent-faint);
+  color: var(--color-text);
+}
 
 .titlebar__divider {
   width: 1px;

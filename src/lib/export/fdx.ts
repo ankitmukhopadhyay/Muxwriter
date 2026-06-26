@@ -1,4 +1,4 @@
-import type { ElementType, ScriptElement } from "../fountain";
+import { groupDualRows, type ElementType, type ScriptElement } from "../fountain";
 import type { MuxwMetadata } from "../muxw";
 import { saveTextExport } from "./save";
 import { titlePage, type ExportOptions } from "./titlepage";
@@ -70,8 +70,18 @@ export function buildFdx(
   metadata: MuxwMetadata,
   options: ExportOptions,
 ): string {
-  const body = elements
-    .map((el) => paragraph(FDX_TYPE[el.type], format(el.type, el.text)))
+  const body = groupDualRows(elements)
+    .map((row) => {
+      if (row.kind === "single") {
+        return paragraph(FDX_TYPE[row.el.type], format(row.el.type, row.el.text));
+      }
+      // Final Draft dual dialogue: a <Paragraph> wrapping a <DualDialogue>
+      // that holds the left block followed by the right block.
+      const inner = [...row.left, ...row.right]
+        .map((el) => paragraph(FDX_TYPE[el.type], format(el.type, el.text), "        "))
+        .join("\n");
+      return `    <Paragraph>\n      <DualDialogue>\n${inner}\n      </DualDialogue>\n    </Paragraph>`;
+    })
     .join("\n");
   const title = options.titlePage ? titlePageXml(metadata) : "";
   return [

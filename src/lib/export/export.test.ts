@@ -99,6 +99,22 @@ describe("buildFdx", () => {
     expect(out).toContain("A &amp; B");
     expect(out).toContain("&lt;go&gt;");
   });
+
+  it("wraps dual dialogue in a DualDialogue element", () => {
+    const elements = [
+      makeElement("character", "BRICK"),
+      makeElement("dialogue", "Screw retirement."),
+      { ...makeElement("character", "STEEL"), dual: true },
+      makeElement("dialogue", "Screw retirement."),
+    ];
+    const out = buildFdx(elements, emptyMetadata(), NO_TITLE);
+    expect(out).toContain("<DualDialogue>");
+    expect(out).toContain("</DualDialogue>");
+    // Both speakers live inside, and there is no stray separator character.
+    expect(out).toContain("BRICK");
+    expect(out).toContain("STEEL");
+    expect(out).not.toContain("STEEL ^");
+  });
 });
 
 describe("buildText", () => {
@@ -115,6 +131,19 @@ describe("buildDocx", () => {
     // DOCX is a zip; zip files start with PK\x03\x04.
     expect(bytes[0]).toBe(0x50);
     expect(bytes[1]).toBe(0x4b);
+    expect(bytes.length).toBeGreaterThan(500);
+  });
+
+  it("builds a docx with dual dialogue (a two column table) without error", async () => {
+    const elements = [
+      makeElement("scene_heading", "INT. ALLEY - NIGHT"),
+      makeElement("character", "BRICK"),
+      makeElement("dialogue", "Screw retirement."),
+      { ...makeElement("character", "STEEL"), dual: true },
+      makeElement("dialogue", "Screw retirement."),
+    ];
+    const bytes = await buildDocx(elements, emptyMetadata(), NO_TITLE);
+    expect(bytes[0]).toBe(0x50);
     expect(bytes.length).toBeGreaterThan(500);
   });
 });

@@ -16,6 +16,8 @@ interface TitleBarProps {
   onNotes: () => void;
   onInsights: () => void;
   onExport: () => void;
+  onToggleOutline: () => void;
+  outlineOpen: boolean;
   onToggleTheme: () => void;
 }
 
@@ -37,6 +39,8 @@ export function TitleBar({
   onNotes,
   onInsights,
   onExport,
+  onToggleOutline,
+  outlineOpen,
   onToggleTheme,
 }: TitleBarProps) {
   const minimize = () => void appWindow()?.minimize();
@@ -53,6 +57,15 @@ export function TitleBar({
       </div>
 
       <div className="titlebar__actions">
+        <button
+          type="button"
+          className={`ghostbtn${outlineOpen ? " ghostbtn--active" : ""}`}
+          onClick={onToggleOutline}
+          title="Toggle the scene navigator"
+        >
+          Scenes
+        </button>
+        <span className="titlebar__divider" />
         <button type="button" className="ghostbtn" onClick={onNew} title="New (Ctrl+N)">
           New
         </button>
